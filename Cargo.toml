@@ -1,0 +1,41 @@
+[package]
+name = "aoc-2023"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+itertools = "0.10.5"
+derive_more = "0.99.17"
+petgraph = "0.6.2"
+pathfinding = { git = "https://github.com/danielhuang/pathfinding", rev = "dab11c768cb5cafa59966955d1b25a033c2545b1" }
+stringtools = { git = "https://github.com/danielhuang/stringtools" }
+regex = "1.7.0"
+serde = { version = "1.0.147", features = ["derive"] }
+serde_json = "1.0.89"
+cached = "0.26.2"
+lazy-regex = "2.3.1"
+seahash = "4.1.0"
+rustc-hash = "1.1.0"
+cli-clipboard = "0.3.0"
+owo-colors = "3.5.0"
+btreelist = "0.4.0"
+reqwest = { version = "0.11.13", features = ["blocking", "cookies"] }
+mimalloc = { version = "0.1.32", default-features = false }
+num = "0.4.1"
+rayon = "1.6.1"
+multimap = "0.8.3"
+btreemultimap = "0.1.0"
+prime_factorization = "1.0.4"
+btree-vec = { version = "0.3.2-dev", rev = "fc6f78f082dce9b0bfb7d127f7daa97f38866e4e", git = "https://github.com/danielhuang/btree-vec" }
+color-eyre = "0.6.2"
+better-panic = "0.3.0"
+tap = "1.0.1"
+
+[profile.dev]
+opt-level = 2
+
+[profile.release]
+debug = true
+overflow-checks = true

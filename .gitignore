@@ -1,0 +1,4 @@
+/target
+perf.*
+flamegraph.svg
+src/bin/z_*
