@@ -47,6 +47,7 @@ pub use std::cmp::Ordering;
 pub use std::collections::*;
 use std::env::args;
 pub use std::fmt::{Debug, Display};
+use std::fs;
 use std::fs::metadata;
 pub use std::fs::{read_to_string, File};
 pub use std::hash::Hash;
@@ -60,6 +61,7 @@ use std::ptr::null;
 use std::str::FromStr;
 use std::sync::atomic::AtomicUsize;
 use std::sync::{Arc, Mutex};
+use std::time::SystemTime;
 use std::time::{Duration, Instant};
 pub use std::{env, io};
 
@@ -126,6 +128,19 @@ fn day() -> u8 {
     exe.rsplit('/').next().unwrap().parse::<u8>().unwrap()
 }
 
+fn write_atomic(filename: &str, data: &str) {
+    let tmp = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap()
+        .as_millis();
+    let tmp = format!("{filename}.{}", tmp);
+    File::create_new(&tmp)
+        .unwrap()
+        .write_all(data.as_bytes())
+        .unwrap();
+    fs::rename(tmp, filename).unwrap();
+}
+
 pub fn load_input() -> String {
     better_panic::install();
 
@@ -149,10 +164,7 @@ pub fn load_input() -> String {
                 io::stdout().flush().unwrap();
                 match fetch(&url) {
                     Ok(input) => {
-                        File::create_new(&path)
-                            .unwrap()
-                            .write_all(input.as_bytes())
-                            .unwrap();
+                        write_atomic(&path, &input);
                         println!("done!");
                         input
                     }
@@ -167,7 +179,7 @@ pub fn load_input() -> String {
                 }
             }
         };
-        let submitted_path = format!("target/{}.submitted", day());
+        let submitted_path = format!("target/{}.html", day());
         let submitted = match metadata(&submitted_path) {
             Ok(_) => true,
             Err(_) => {
@@ -175,10 +187,7 @@ pub fn load_input() -> String {
                 if page.contains(
                     "Both parts of this puzzle are complete! They provide two gold stars: **",
                 ) {
-                    File::create(submitted_path)
-                        .unwrap()
-                        .write_all(page.as_bytes())
-                        .unwrap();
+                    write_atomic(&submitted_path, &page);
                     true
                 } else {
                     false
@@ -213,7 +222,7 @@ pub fn cp(x: impl Display) {
         );
     } else {
         if *SUBMITTED.lock().unwrap() {
-            let page_html = read_to_string(format!("target/{}.submitted", day())).unwrap();
+            let page_html = read_to_string(format!("target/{}.html", day())).unwrap();
             let mut correct_answers = vec![];
             for line in page_html.lines() {
                 if let Some(line) = line.strip_prefix("<p>Your puzzle answer was <code>") {
@@ -1006,8 +1015,7 @@ pub trait StringExt: ToString {
     fn digits(&self) -> Vec<i64> {
         self.to_string()
             .chars()
-            .filter(|x| x.is_ascii_digit())
-            .map(|x| x.to_string().int())
+            .filter_map(|x| x.to_digit(10).map(|x| x as i64))
             .collect()
     }
 
@@ -1067,7 +1075,7 @@ impl Hash for OpaqueId {
 
 pub fn fresh() -> usize {
     static STATE: AtomicUsize = AtomicUsize::new(0);
-    STATE.fetch_add(1, std::sync::atomic::Ordering::SeqCst)
+    STATE.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
 }
 
 pub fn memo_dfs<N, FN, IN, FS>(start: N, mut successors: FN, mut success: FS) -> Option<Vec<N>>

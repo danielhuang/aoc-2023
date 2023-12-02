@@ -11,15 +11,19 @@ fn main() {
     ];
 
     for mut line in input.lines() {
-        sum1 += line.digits()[0] * 10;
-        sum1 += line.digits().last().unwrap();
-        while !nums.cii().any(|x| line.starts_with(x)) && !line.chars().next().unwrap().is_numeric()
+        let digits = line.digits();
+        sum1 += digits[0] * 10 + digits[digits.len() - 1];
+
+        while !nums.iter().any(|x| line.starts_with(x))
+            && !line.chars().next().unwrap().is_numeric()
         {
             line = &line[1..];
         }
-        while !nums.cii().any(|x| line.ends_with(x)) && !line.chars().last().unwrap().is_numeric() {
+        while !nums.iter().any(|x| line.ends_with(x)) && !line.chars().last().unwrap().is_numeric()
+        {
             line = &line[..line.len() - 1];
         }
+
         let mut a = 0;
         let mut b = 0;
         for (x, num) in nums.iter().enumerate() {
@@ -29,12 +33,12 @@ fn main() {
             if line.ends_with(num) {
                 b = x + 1;
             }
-            if line.chars().next().unwrap().is_numeric() {
-                a = line.digits()[0].uint();
-            }
-            if line.chars().last().unwrap().is_numeric() {
-                b = line.digits()[line.digits().len() - 1].uint();
-            }
+        }
+        if line.chars().next().unwrap().is_numeric() {
+            a = digits[0] as usize;
+        }
+        if line.chars().last().unwrap().is_numeric() {
+            b = digits[digits.len() - 1] as usize;
         }
         sum2 += a * 10 + b;
     }
