@@ -32,6 +32,7 @@ btree-vec = { version = "0.3.2-dev", rev = "fc6f78f082dce9b0bfb7d127f7daa97f3886
 color-eyre = "0.6.2"
 better-panic = "0.3.0"
 tap = "1.0.1"
+terminal_size = "0.3.0"
 
 [profile.dev]
 opt-level = 2

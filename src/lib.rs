@@ -35,6 +35,7 @@ pub use pathfinding::undirected::connected_components::*;
 pub use pathfinding::undirected::kruskal::*;
 pub use pathfinding::utils::*;
 pub use prime_factorization::*;
+use regex::Regex;
 use reqwest::blocking::Client;
 pub use rustc_hash::{FxHashMap, FxHashSet};
 use serde::de::DeserializeOwned;
@@ -174,7 +175,7 @@ pub fn load_input() -> String {
                         assert!(fetch("https://adventofcode.com/2023")
                             .unwrap()
                             .contains("[Log Out]"));
-                        panic!("cookie works")
+                        panic!("cookie works, input missing!")
                     }
                 }
             }
@@ -199,6 +200,27 @@ pub fn load_input() -> String {
     };
 
     *START_TS.lock().unwrap() = Some(Instant::now());
+
+    println!(
+        "loaded input: {} chars, {} lines, {} paras",
+        input.len(),
+        input.lines().count(),
+        input.split("\n\n").count()
+    );
+
+    let mut lines = input.lines();
+    if let Some(line) = lines.next() {
+        println!("{}", line.blue());
+    }
+    let last = lines.next_back();
+    if let Some(_) = lines.next() {
+        println!("(... {} more lines)", lines.count() + 1);
+    }
+    if let Some(line) = last {
+        println!("{}", line.blue());
+    }
+    bar();
+
     input
 }
 
@@ -1022,6 +1044,30 @@ pub trait StringExt: ToString {
     fn json<T: DeserializeOwned>(&self) -> T {
         serde_json::from_str(&self.to_string()).unwrap()
     }
+
+    fn alphanumeric_words(&self) -> Vec<String> {
+        self.to_string()
+            .replace(|x: char| !x.is_alphanumeric(), "")
+            .words()
+    }
+
+    fn regex(&self, regex: &str) -> Vec<Vec<String>> {
+        #[cached]
+        fn compile_regex(regex: String) -> Regex {
+            Regex::new(&regex).unwrap()
+        }
+
+        let regex = compile_regex(regex.to_string());
+        regex
+            .captures_iter(&self.to_string())
+            .map(|x| {
+                x.iter()
+                    .skip(1)
+                    .map(|x| x.unwrap().as_str().to_string())
+                    .collect_vec()
+            })
+            .collect_vec()
+    }
 }
 
 impl<T: ToString> StringExt for T {}
@@ -1256,11 +1302,11 @@ impl<T: Serialize> Serde for T {}
 
 pub trait DebugExt: Debug + Sized {
     fn dbg(self) -> Self {
-        self.cd();
+        self.dbgr();
         self
     }
 
-    fn cd(&self) {
+    fn dbgr(&self) {
         let bt = Backtrace::capture();
         let file = bt
             .frames()
@@ -1280,9 +1326,22 @@ pub trait DebugExt: Debug + Sized {
         eprintln!("[src/bin/{}:{}] {:#?}", file, line, self);
     }
 
+    fn cd(&self) -> Self
+    where
+        Self: Clone,
+    {
+        self.dbgr();
+        self.clone()
+    }
+
     fn to_debug_string(&self) -> String {
         format!("{self:?}")
     }
 }
 
 impl<T: Debug> DebugExt for T {}
+
+pub fn bar() {
+    let size = terminal_size::terminal_size().unwrap();
+    eprintln!("{}", "⎯".repeat(size.0 .0 as usize))
+}
