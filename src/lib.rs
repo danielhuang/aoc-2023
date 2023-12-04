@@ -407,7 +407,7 @@ pub trait ExtraItertools: IntoIterator + Sized {
         Self: Clone,
     {
         let mut iter = self.cii();
-        let item:<Self as IntoIterator>::Item = iter.next().unwrap();
+        let item: <Self as IntoIterator>::Item = iter.next().unwrap();
         assert!(iter.next().is_none());
 
         item
