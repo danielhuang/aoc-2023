@@ -7,6 +7,8 @@
 #![feature(box_patterns)]
 #![feature(closure_track_caller)]
 #![feature(backtrace_frames)]
+#![feature(return_position_impl_trait_in_trait)]
+// #![feature(return_position_impl_trait_in_trait)]
 
 pub use ::tap::*;
 pub use btree_vec::BTreeVec;
@@ -35,7 +37,7 @@ pub use pathfinding::undirected::connected_components::*;
 pub use pathfinding::undirected::kruskal::*;
 pub use pathfinding::utils::*;
 pub use prime_factorization::*;
-use regex::Regex;
+use regex::{Captures, Match, Regex};
 use reqwest::blocking::Client;
 pub use rustc_hash::{FxHashMap, FxHashSet};
 use serde::de::DeserializeOwned;
@@ -43,10 +45,9 @@ pub use serde::{Deserialize, Serialize};
 use serde_json::Value;
 pub use std::any::Any;
 use std::array;
-use std::backtrace::Backtrace;
+use std::backtrace::{Backtrace, BacktraceFrame};
 pub use std::cmp::Ordering;
 pub use std::collections::*;
-use std::env::args;
 pub use std::fmt::{Debug, Display};
 use std::fs;
 use std::fs::metadata;
@@ -59,12 +60,16 @@ pub use std::ops::Mul;
 use std::ops::RangeBounds;
 pub use std::process::{Command, Stdio};
 use std::ptr::null;
-use std::str::FromStr;
+use std::str::{FromStr, Split};
 use std::sync::atomic::AtomicUsize;
-use std::sync::{Arc, Mutex};
-use std::time::SystemTime;
+use std::sync::{Arc, Mutex, MutexGuard};
+use std::time::{SystemTime, SystemTimeError};
 use std::time::{Duration, Instant};
 pub use std::{env, io};
+use std::collections::hash_map::Iter;
+use std::hash::BuildHasherDefault;
+use std::path::Path;
+use std::process::{Child, ChildStdin, ChildStdout};
 
 pub mod cartesian;
 pub mod defaultmap;
@@ -75,6 +80,9 @@ pub use crate::defaultmap::*;
 pub use crate::printer::*;
 
 use mimalloc::MiMalloc;
+use reqwest::{Request, RequestBuilder};
+use rustc_hash::FxHasher;
+use terminal_size::{Height, Width};
 
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
@@ -106,15 +114,15 @@ static SUBMITTED: Mutex<bool> = Mutex::new(false);
 static START_TS: Mutex<Option<Instant>> = Mutex::new(None);
 
 fn read_clipboard() -> Option<String> {
-    let mut cmd = Command::new("xclip")
-        .arg("-o")
-        .arg("clip")
-        .stdout(Stdio::piped())
+    let mut cmd: Child = Command::new("xclip")
+        .arg("-o"): &mut Command
+        .arg("clip"): &mut Command
+        .stdout(Stdio::piped()): &mut Command
         .spawn()
         .unwrap();
-    let mut stdout = cmd.stdout.take().unwrap();
+    let mut stdout: ChildStdout = cmd.stdout.take().unwrap();
     cmd.wait().unwrap();
-    let mut s = String::new();
+    let mut s: String = String::new();
     match stdout.read_to_string(&mut s) {
         Ok(_) => Some(s),
         Err(e) => {
@@ -125,18 +133,34 @@ fn read_clipboard() -> Option<String> {
 }
 
 fn day() -> u8 {
-    let exe = args().next().unwrap();
-    exe.rsplit('/').next().unwrap().parse::<u8>().unwrap()
+    let exe: String = env::args().next().unwrap();
+    let exe_path: &Path = Path::new(&exe);
+    let day_str: &str = exe_path.file_stem().unwrap().to_str().unwrap();
+
+    // Print the value of day_str for debugging
+    println!("Day String: {:?}", day_str);
+
+    // Attempt to parse day_str as u8
+    match day_str.parse::<u8>() {
+        Ok(parsed_day) => parsed_day,
+        Err(err) => {
+            eprintln!("Failed to parse day as u8: {:?}", err);
+            // Handle the error, you might want to return a default value or panic.
+            // For now, we'll panic to show that an error occurred.
+            panic!("Failed to parse day as u8");
+        }
+    }
 }
 
+
 fn write_atomic(filename: &str, data: &str) {
-    let tmp = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap()
+    let tmp: u128 = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH): Result<Duration, SystemTimeError>
+        .unwrap(): Duration
         .as_millis();
-    let tmp = format!("{filename}.{}", tmp);
+    let tmp: String = format!("{filename}.{}", tmp);
     File::create_new(&tmp)
-        .unwrap()
+        .unwrap(): File
         .write_all(data.as_bytes())
         .unwrap();
     fs::rename(tmp, filename).unwrap();
@@ -145,8 +169,8 @@ fn write_atomic(filename: &str, data: &str) {
 pub fn load_input() -> String {
     better_panic::install();
 
-    let input = if DEBUG {
-        let sample = read_to_string(format!("src/bin/{}.sample.txt", day())).unwrap();
+    let input: String = {
+        let sample: String = read_to_string(format!("src/bin/{}.sample.txt", day())).unwrap();
         if sample.trim().is_empty() {
             println!("{}", "reading sample input from clipboard!!".red().bold());
             read_clipboard().unwrap()
@@ -154,49 +178,6 @@ pub fn load_input() -> String {
             println!("{}", "using saved sample input".blue().bold());
             sample
         }
-    } else {
-        let url = format!("https://adventofcode.com/2023/day/{}/input", day());
-        let path = format!("target/{}.input.txt", day());
-        let input = match read_to_string(&path) {
-            Ok(x) => x,
-            Err(e) => {
-                println!("{e:?}");
-                print!("Downloading input... ");
-                io::stdout().flush().unwrap();
-                match fetch(&url) {
-                    Ok(input) => {
-                        write_atomic(&path, &input);
-                        println!("done!");
-                        input
-                    }
-                    Err(e) => {
-                        dbg!(e);
-                        println!("testing session cookie...");
-                        assert!(fetch("https://adventofcode.com/2023")
-                            .unwrap()
-                            .contains("[Log Out]"));
-                        panic!("cookie works, input missing!")
-                    }
-                }
-            }
-        };
-        let submitted_path = format!("target/{}.html", day());
-        let submitted = match metadata(&submitted_path) {
-            Ok(_) => true,
-            Err(_) => {
-                let page = fetch(&format!("https://adventofcode.com/2023/day/{}", day())).unwrap();
-                if page.contains(
-                    "Both parts of this puzzle are complete! They provide two gold stars: **",
-                ) {
-                    write_atomic(&submitted_path, &page);
-                    true
-                } else {
-                    false
-                }
-            }
-        };
-        *SUBMITTED.lock().unwrap() = submitted;
-        input
     };
 
     *START_TS.lock().unwrap() = Some(Instant::now());
@@ -225,59 +206,22 @@ pub fn load_input() -> String {
 }
 
 pub fn cp(x: impl Display) {
-    let elapsed = START_TS.lock().unwrap().unwrap().elapsed();
-    let elapsed = format!("{:?}", elapsed);
+    let elapsed: Duration = START_TS.lock().unwrap().unwrap().elapsed();
+    let elapsed: String = format!("{:?}", elapsed);
 
     static COPIES: Mutex<usize> = Mutex::new(0);
-    let mut copies = COPIES.lock().unwrap();
+    let mut copies: MutexGuard<usize> = COPIES.lock().unwrap();
     if *copies >= 2 {
         println!("value: {}", x.red().bold());
         panic!("already copied twice");
     }
     *copies += 1;
 
-    if DEBUG {
-        println!(
-            "value: {} (debug mode, not copying) took {}",
-            x.blue().bold(),
-            elapsed.yellow()
-        );
-    } else {
-        if *SUBMITTED.lock().unwrap() {
-            let page_html = read_to_string(format!("target/{}.html", day())).unwrap();
-            let mut correct_answers = vec![];
-            for line in page_html.lines() {
-                if let Some(line) = line.strip_prefix("<p>Your puzzle answer was <code>") {
-                    let (line, _) = line.split_once("</code>.</p>").unwrap();
-                    correct_answers.push(line.to_string());
-                }
-            }
-            if correct_answers[*copies - 1] == x.to_string() {
-                println!(
-                    "value: {} (correct!) took {}",
-                    x.green().bold(),
-                    elapsed.yellow()
-                );
-            } else {
-                println!(
-                    "value: {} (incorrect answer) took {}",
-                    x.red().bold(),
-                    elapsed.yellow()
-                );
-            }
-        } else {
-            if env::var("AOC_COPY_CLIPBOARD").is_ok() {
-                force_copy(&x);
-                println!("value: {} (copied to clipboard)", x.green().bold());
-            } else {
-                println!(
-                    "value: {} (set AOC_COPY_CLIPBOARD=1 to enable copy) took {}",
-                    x.green().bold(),
-                    elapsed.yellow()
-                );
-            }
-        }
-    }
+    println!(
+        "value: {} (debug mode, not copying) took {}",
+        x.blue().bold(),
+        elapsed.yellow()
+    );
 
     *START_TS.lock().unwrap() = Some(Instant::now());
 }
@@ -285,13 +229,13 @@ pub fn cp(x: impl Display) {
 pub fn force_copy(x: &impl Display) {
     // Copy it twice to work around a bug.
     for _ in 0..2 {
-        let mut cmd = Command::new("xclip")
-            .arg("-sel")
-            .arg("clip")
-            .stdin(Stdio::piped())
+        let mut cmd: Child = Command::new("xclip")
+            .arg("-sel"): &mut Command
+            .arg("clip"): &mut Command
+            .stdin(Stdio::piped()): &mut Command
             .spawn()
             .unwrap();
-        let mut stdin = cmd.stdin.take().unwrap();
+        let mut stdin: ChildStdin = cmd.stdin.take().unwrap();
         stdin.write_all(x.to_string().as_bytes()).unwrap();
         stdin.flush().unwrap();
         drop(stdin);
@@ -329,10 +273,10 @@ pub fn collect_2d<T>(s: impl IntoIterator<Item = impl IntoIterator<Item = T>>) -
 }
 
 pub fn transpose_vec<T: Default + Clone>(s: Vec<Vec<T>>) -> Vec<Vec<T>> {
-    assert!(s.iter().map(|x| x.len()).all_equal());
+    assert!(s.iter().map(|x: &Vec<T>| x.len()).all_equal());
     assert!(!s.is_empty());
     assert!(!s[0].is_empty());
-    let mut result = vec![vec![T::default(); s.len()]; s[0].len()];
+    let mut result: Vec<Vec<T>>  = vec![vec![T::default(); s.len()]; s[0].len()];
     for (i, row) in s.iter().cloned().enumerate() {
         for (j, x) in row.iter().cloned().enumerate() {
             result[j][i] = x;
@@ -419,8 +363,9 @@ pub trait ExtraItertools: IntoIterator + Sized {
         Self: Clone,
     {
         let mut iter = self.cii();
-        let item = iter.next().unwrap();
+        let item:<Self as IntoIterator>::Item = iter.next().unwrap();
         assert!(iter.next().is_none());
+
         item
     }
 
@@ -438,23 +383,23 @@ pub trait ExtraItertools: IntoIterator + Sized {
 
     fn ca<const N: usize>(self) -> [Self::Item; N]
     where
-        <Self as std::iter::IntoIterator>::Item: std::fmt::Debug,
+        <Self as IntoIterator>::Item: Debug,
     {
         self.cv().try_into().unwrap()
     }
 
     fn sumi(self) -> Self::Item
     where
-        <Self as std::iter::IntoIterator>::Item: std::ops::Add<Output = Self::Item> + Default,
+        <Self as IntoIterator>::Item: std::ops::Add<Output = Self::Item> + Default,
     {
-        self.ii().fold(Default::default(), |a, b| a + b)
+        self.ii().fold(Default::default(), |a: <Self as IntoIterator>::Item, b| a + b)
     }
 }
 
 impl<T: IntoIterator + Sized + Clone> ExtraItertools for T {}
 
 pub fn freqs<T: Hash + Eq>(i: impl IntoIterator<Item = T>) -> DefaultHashMap<T, usize> {
-    let mut result = DefaultHashMap::new(0);
+    let mut result: DefaultHashMap<T, usize> = DefaultHashMap::new(0);
     for x in i {
         result[x] += 1;
     }
@@ -536,7 +481,7 @@ impl Intervals {
             }
             _ => {}
         }
-        for to_remove in self.bounds.range(range).map(|x| *x.0).collect_vec() {
+        for to_remove in self.bounds.range(range).map(|x: (&i64, &IntervalEdge)| *x.0).collect_vec() {
             self.bounds.remove(&to_remove);
         }
     }
@@ -596,7 +541,7 @@ impl Intervals {
     }
 
     pub fn covered_size(&self) -> i64 {
-        let mut total = 0;
+        let mut total: i64 = 0;
         for (left, right) in self.bounds.iter().tuple_windows() {
             match left.1 {
                 IntervalEdge::Start => {
@@ -613,19 +558,19 @@ pub fn bfs2<T: Clone + Hash + Eq, I: IntoIterator<Item = T>>(
     start: T,
     mut find_nexts: impl FnMut(usize, T) -> I,
 ) -> impl Iterator<Item = (usize, T)> {
-    let mut edge = VecDeque::new();
-    let mut seen = HashSet::new();
+    let mut edge: VecDeque<T> = VecDeque::new();
+    let mut seen: HashSet<T> = HashSet::new();
 
     seen.insert(start.clone());
     edge.push_back(start);
 
-    let mut i = 0;
+    let mut i: usize = 0;
 
     from_fn(move || {
-        let mut result = vec![];
+        let mut result: Vec<(usize, T)> = vec![];
         for _ in 0..edge.len() {
-            let item = edge.pop_front()?;
-            let nexts = find_nexts(i, item.clone());
+            let item: T = edge.pop_front()?;
+            let nexts: I = find_nexts(i, item.clone());
             for next in nexts {
                 seen.insert(next.clone());
                 edge.push_back(next);
@@ -645,10 +590,10 @@ pub fn sometimes() -> bool {
     static PREV: Mutex<Option<Instant>> = Mutex::new(None);
     static COUNT: AtomicUsize = AtomicUsize::new(0);
 
-    let count = COUNT.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    let count: usize = COUNT.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
 
-    let mut s = PREV.lock().unwrap();
-    let result = s.is_none() || s.is_some_and(|x| x.elapsed() > Duration::from_millis(250));
+    let mut s: MutexGuard<Option<Instant>> = PREV.lock().unwrap();
+    let result: bool = s.is_none() || s.is_some_and(|x: Instant| x.elapsed() > Duration::from_millis(250));
     if result {
         println!("sometimes count: {count}");
         *s = Some(Instant::now());
@@ -669,7 +614,7 @@ impl<const N: usize> Cuboid<N> {
     }
 
     pub fn lengths(&self) -> [i64; N] {
-        array::from_fn(|dim| self.length(dim))
+        array::from_fn(|dim: usize| self.length(dim))
     }
 
     pub fn size(&self) -> i64 {
@@ -682,10 +627,10 @@ impl<const N: usize> Cuboid<N> {
 
     pub fn surface_area(&self) -> i64 {
         2 * (0..N)
-            .map(|k| {
+            .map(|k: usize| {
                 (0..N)
-                    .filter(|&j| k != j)
-                    .map(|j| self.length(j))
+                    .filter(|j: &usize| k != j)
+                    .map(|j: usize| self.length(j))
                     .product::<i64>()
             })
             .sum::<i64>()
@@ -698,7 +643,7 @@ impl<const N: usize> Cuboid<N> {
     }
 
     pub fn resize(&self, amount: i64) -> Self {
-        let mut new = *self;
+        let mut new: Cuboid<N> = *self;
         for dim in 0..N {
             new.min[dim] -= amount;
             new.max[dim] += amount;
@@ -716,18 +661,18 @@ impl<const N: usize> Cuboid<N> {
     }
 
     pub fn contains_point(&self, p: Point<N>) -> bool {
-        (0..N).all(|dim| (self.min[dim]..=self.max[dim]).contains(&p.0[dim]))
+        (0..N).all(|dim: usize| (self.min[dim]..=self.max[dim]).contains(&p.0[dim]))
     }
 
     pub fn contains(&self, p: impl Boundable<N>) -> bool {
-        p.points().all(|x| self.contains_point(x))
+        p.points().all(|x: Point<N>| self.contains_point(x))
     }
 
     fn things_inside(&self, length_add: i64) -> Vec<[i64; N]> {
-        let total: i64 = (0..N).map(|x| self.length(x) + length_add).product();
-        let mut output = vec![];
+        let total: i64 = (0..N).map(|x: usize| self.length(x) + length_add).product();
+        let mut output: Vec<[i64; N]> = vec![];
         for mut n in 0..total {
-            let mut pos = self.min;
+            let mut pos: [i64; N] = self.min;
             for (dim, x) in pos.iter_mut().enumerate() {
                 *x += n % (self.length(dim) + length_add);
                 n /= self.length(dim) + length_add;
@@ -754,18 +699,18 @@ impl<const N: usize> Cuboid<N> {
     }
 
     pub fn wrap<T: Cartesian<N>>(&self, value: T) -> T {
-        T::new(array::from_fn(|dim| {
-            let relative = value[dim] - self.min[dim];
-            let wrapped_relative = relative.rem_euclid(self.length(dim));
+        T::new(array::from_fn(|dim: usize| {
+            let relative: i64 = value[dim] - self.min[dim];
+            let wrapped_relative: i64 = relative.rem_euclid(self.length(dim));
             wrapped_relative + self.min[dim]
         }))
     }
 }
 
 pub fn bounds_points<const N: usize>(i: impl IntoIterator<Item = Point<N>>) -> Cuboid<N> {
-    let mut i = i.into_iter();
+    let mut i: impl Iterator<Item = Point<N>> = i.into_iter();
 
-    let first = i.next().expect("must have at least one point");
+    let first: Point<N> = i.next().expect("must have at least one point");
     let mut bounds = Cuboid {
         min: first.0,
         max: first.0,
@@ -804,12 +749,12 @@ pub trait DefaultHashMapExt<K, V> {
         K: Clone + Eq + Hash,
         V: IntoIterator,
         <V as IntoIterator>::Item: Clone,
-        <V as IntoIterator>::Item: std::cmp::Eq + Hash;
+        <V as IntoIterator>::Item: Eq + Hash;
 }
 
 impl<K: Eq + Hash + Clone, V: Clone + PartialEq> DefaultHashMapExt<K, V> for DefaultHashMap<K, V> {
     fn find(&self, mut f: impl FnMut(V) -> bool) -> Vec<K> {
-        let mut l = vec![];
+        let mut l: Vec<K> = vec![];
         for (k, v) in self.iter() {
             if f(v.clone()) {
                 l.push(k.clone());
@@ -819,13 +764,13 @@ impl<K: Eq + Hash + Clone, V: Clone + PartialEq> DefaultHashMapExt<K, V> for Def
     }
 
     fn findv(&self, value: V) -> Vec<K> {
-        self.find(|v| v == value)
+        self.find(|v: V| v == value)
     }
 
     fn undef(&self) -> HashMap<K, V> {
-        self.iter()
-            .filter(|(_, v)| **v != self.default)
-            .map(|(k, v)| (k.clone(), v.clone()))
+        self.iter(): Iter<K, V>
+            .filter(|(_, v)| **v != self.default): Iter<K, V>
+            .map(|(k, v)| (k.clone(), v.clone())): Iter<K, V>
             .collect()
     }
 
@@ -834,7 +779,7 @@ impl<K: Eq + Hash + Clone, V: Clone + PartialEq> DefaultHashMapExt<K, V> for Def
         V: Clone + Eq + Hash,
         K: Clone,
     {
-        let mut map = DefaultHashMap::new(vec![]);
+        let mut map: DefaultHashMap<V, Vec<K>> = DefaultHashMap::new(vec![]);
         for (k, v) in self.iter() {
             map[v.clone()].push(k.clone());
         }
@@ -846,9 +791,9 @@ impl<K: Eq + Hash + Clone, V: Clone + PartialEq> DefaultHashMapExt<K, V> for Def
         K: Clone + Eq + Hash,
         V: IntoIterator,
         <V as IntoIterator>::Item: Clone,
-        <V as IntoIterator>::Item: std::cmp::Eq + Hash,
+        <V as IntoIterator>::Item: Eq + Hash,
     {
-        let mut map = HashMap::new();
+        let mut map: HashMap<<V as IntoIterator>::Item, K> = HashMap::new();
         for (k, v) in self.iter() {
             for v in v.clone().into_iter() {
                 map.insert(v.clone(), k.clone());
@@ -873,7 +818,7 @@ impl<T: Hash + Eq + Clone + Debug> DisjointSet<T> {
     }
 
     pub fn using(to_add: impl IntoIterator<Item = T>) -> Self {
-        let mut s = Self::new();
+        let mut s: DisjointSet<T> = Self::new();
         for x in to_add {
             s.add(x);
         }
@@ -882,7 +827,7 @@ impl<T: Hash + Eq + Clone + Debug> DisjointSet<T> {
 
     fn find_root(&mut self, x: T) -> T {
         if let Some(parent) = self.map.get(&x) {
-            let root = self.find_root(parent.clone());
+            let root: T = self.find_root(parent.clone());
             self.map.insert(x, root.clone()).unwrap();
             root
         } else {
@@ -898,8 +843,8 @@ impl<T: Hash + Eq + Clone + Debug> DisjointSet<T> {
     pub fn join(&mut self, a: T, b: T) -> bool {
         self.add(a.clone());
         self.add(b.clone());
-        let a = self.find_root(a);
-        let b = self.find_root(b);
+        let a: T = self.find_root(a);
+        let b: T = self.find_root(b);
         if a == b {
             false
         } else {
@@ -917,7 +862,7 @@ impl<T: Hash + Eq + Clone + Debug> DisjointSet<T> {
     }
 
     pub fn sets(&mut self) -> Vec<Vec<T>> {
-        let mut seen_roots = MultiMap::new();
+        let mut seen_roots: MultiMap<T, T> = MultiMap::new();
         for x in self.all() {
             seen_roots.insert(self.find_root(x.clone()), x.clone());
         }
@@ -964,9 +909,9 @@ pub trait DisplayExt: Display {
     }
 
     fn ints(&self) -> Vec<i64> {
-        self.to_string()
+        self.to_string(): String
             .split(|c: char| !c.is_numeric() && c != '-')
-            .filter_map(|x| {
+            .filter_map(|x: &str| {
                 if x.is_empty() {
                     None
                 } else {
@@ -977,9 +922,9 @@ pub trait DisplayExt: Display {
     }
 
     fn uints(&self) -> Vec<usize> {
-        self.to_string()
+        self.to_string(): String
             .split(|c: char| !c.is_numeric())
-            .filter_map(|x| {
+            .filter_map(|x: &str| {
                 if x.is_empty() {
                     None
                 } else {
@@ -990,9 +935,9 @@ pub trait DisplayExt: Display {
     }
 
     fn uints2(&self) -> Vec<i64> {
-        self.to_string()
+        self.to_string(): String
             .split(|c: char| !c.is_numeric())
-            .filter_map(|x| {
+            .filter_map(|x: &str| {
                 if x.is_empty() {
                     None
                 } else {
@@ -1003,16 +948,16 @@ pub trait DisplayExt: Display {
     }
 
     fn words(&self) -> Vec<String> {
-        self.to_string()
+        self.to_string(): String
             .split_whitespace()
-            .map(|x| x.to_string())
+            .map(|x: &str| x.to_string())
             .collect()
     }
 
     fn paragraphs(&self) -> Vec<String> {
-        self.to_string()
+        self.to_string(): String
             .split("\n\n")
-            .map(|x| x.to_string())
+            .map(|x: &str| x.to_string())
             .collect()
     }
 
@@ -1021,9 +966,9 @@ pub trait DisplayExt: Display {
     }
 
     fn digits(&self) -> Vec<i64> {
-        self.to_string()
+        self.to_string(): String
             .chars()
-            .filter_map(|x| x.to_digit(10).map(|x| x as i64))
+            .filter_map(|x: char| x.to_digit(10).map(|x: u32| x as i64))
             .collect()
     }
 
@@ -1032,8 +977,8 @@ pub trait DisplayExt: Display {
     }
 
     fn alphanumeric_words(&self) -> Vec<String> {
-        self.to_string()
-            .replace(|x: char| !x.is_alphanumeric(), "")
+        self.to_string(): String
+            .replace(|x: char| !x.is_alphanumeric(), ""): String
             .words()
     }
 
@@ -1043,13 +988,13 @@ pub trait DisplayExt: Display {
             Regex::new(&regex).unwrap()
         }
 
-        let regex = compile_regex(regex.to_string());
+        let regex: Regex = compile_regex(regex.to_string());
         regex
             .captures_iter(&self.to_string())
-            .map(|x| {
+            .map(|x: Captures| {
                 x.iter()
                     .skip(1)
-                    .map(|x| x.unwrap().as_str().to_string())
+                    .map(|x: Option<Match>| x.unwrap().as_str().to_string())
                     .collect_vec()
             })
             .collect_vec()
@@ -1135,7 +1080,7 @@ where
         if success(path.last().unwrap()) {
             true
         } else {
-            let successors_it = successors(path.last().unwrap());
+            let successors_it: IN = successors(path.last().unwrap());
             for n in successors_it {
                 if !path.contains(&n) {
                     path.push(n);
@@ -1150,8 +1095,8 @@ where
         }
     }
 
-    let mut path = vec![start];
-    let mut cache = FxHashSet::default();
+    let mut path: Vec<N> = vec![start];
+    let mut cache: HashSet<N, BuildHasherDefault<FxHasher>> = FxHashSet::default();
     step(&mut path, &mut successors, &mut success, &mut cache).then_some(path)
 }
 
@@ -1159,7 +1104,7 @@ pub fn factorize(n: i64) -> Vec<i64> {
     Factorization::run(n as u64)
         .factors
         .into_iter()
-        .map(|x| x as i64)
+        .map(|x: u64| x as i64)
         .collect()
 }
 
@@ -1168,7 +1113,7 @@ pub fn parse_grid<T: Clone>(
     mut f: impl FnMut(char) -> T,
     default: T,
 ) -> DefaultHashMap<Cell2, T> {
-    let mut grid = DefaultHashMap::new(default);
+    let mut grid: DefaultHashMap<Cell<2>, T> = DefaultHashMap::new(default);
 
     for (y, line) in s.lines().enumerate() {
         for (x, c) in line.chars().enumerate() {
@@ -1180,7 +1125,7 @@ pub fn parse_grid<T: Clone>(
 }
 
 pub fn parse_hashset(s: &str, mut f: impl FnMut(char) -> bool) -> HashSet<Cell2> {
-    let mut grid = HashSet::new();
+    let mut grid: HashSet<Cell<2>> = HashSet::new();
 
     for (y, line) in s.lines().enumerate() {
         for (x, c) in line.chars().enumerate() {
@@ -1260,13 +1205,13 @@ pub fn use_cycles<T, K: Eq + Hash>(
     mut key_fn: impl FnMut(&T) -> K,
     count: usize,
 ) -> T {
-    let mut cache = HashMap::new();
+    let mut cache: HashMap<K, usize> = HashMap::new();
     for i in 0..count {
-        let key = key_fn(&state);
+        let key: K = key_fn(&state);
         if let Some(&v) = cache.get(&key) {
-            let cycle_length = i - v;
-            let iters_left = count - i;
-            let iters_after_cycles = iters_left % cycle_length;
+            let cycle_length: usize = i - v;
+            let iters_left: usize = count - i;
+            let iters_after_cycles: usize = iters_left % cycle_length;
             for _ in 0..iters_after_cycles {
                 state = next(state);
             }
@@ -1293,22 +1238,22 @@ pub trait DebugExt: Debug + Sized {
     }
 
     fn dbgr(&self) {
-        let bt = Backtrace::capture();
-        let file = bt
-            .frames()
+        let bt: Backtrace = Backtrace::capture();
+        let file: &BacktraceFrame = bt
+            .frames(): &[BacktraceFrame]
             .iter()
-            .find(|x| format!("{x:?}").contains("/src/bin/"))
+            .find(|x: &&BacktraceFrame| format!("{x:?}").contains("/src/bin/")): Option<&BacktraceFrame>
             .unwrap();
-        let trace = format!("{:?}", file);
-        let trace = trace.split(", ");
+        let trace: String = format!("{:?}", file);
+        let trace: Split<&str> = trace.split(", ");
         let [_, file, line] = trace.ca();
-        let file = file
+        let file: &str = file
             .split_once("/src/bin/")
             .unwrap()
             .1
-            .strip_suffix("\"")
+            .strip_suffix("\""): Option<&str>
             .unwrap();
-        let line = line.ints()[0];
+        let line: i64 = line.ints()[0];
         eprintln!("[src/bin/{}:{}] {:#?}", file, line, self);
     }
 
@@ -1328,14 +1273,14 @@ pub trait DebugExt: Debug + Sized {
 impl<T: Debug> DebugExt for T {}
 
 pub fn bar() {
-    let size = terminal_size::terminal_size().unwrap();
+    let size: (Width, Height) = terminal_size::terminal_size().unwrap();
     eprintln!("{}", "⎯".repeat(size.0 .0 as usize))
 }
 
 pub fn unparse_grid(grid: &DefaultHashMap<Cell<2>, char>) -> String {
-    let b = bounds(grid.find(|x| x != grid.default));
-    let mut s = String::new();
-    let mut i = 0;
+    let b: Cuboid<2> = bounds(grid.find(|x: char| x != grid.default));
+    let mut s: String = String::new();
+    let mut i: i64 = 0;
     for cell in b.cells() {
         s.push(grid[cell]);
         i += 1;
