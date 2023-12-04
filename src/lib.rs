@@ -115,9 +115,9 @@ static START_TS: Mutex<Option<Instant>> = Mutex::new(None);
 
 fn read_clipboard() -> Option<String> {
     let mut cmd: Child = Command::new("xclip")
-        .arg("-o"): &mut Command
-        .arg("clip"): &mut Command
-        .stdout(Stdio::piped()): &mut Command
+        .arg("-o")
+        .arg("clip")
+        .stdout(Stdio::piped())
         .spawn()
         .unwrap();
     let mut stdout: ChildStdout = cmd.stdout.take().unwrap();
@@ -155,12 +155,12 @@ fn day() -> u8 {
 
 fn write_atomic(filename: &str, data: &str) {
     let tmp: u128 = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH): Result<Duration, SystemTimeError>
-        .unwrap(): Duration
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap()
         .as_millis();
     let tmp: String = format!("{filename}.{}", tmp);
     File::create_new(&tmp)
-        .unwrap(): File
+        .unwrap()
         .write_all(data.as_bytes())
         .unwrap();
     fs::rename(tmp, filename).unwrap();
@@ -274,9 +274,9 @@ pub fn force_copy(x: &impl Display) {
     // Copy it twice to work around a bug.
     for _ in 0..2 {
         let mut cmd: Child = Command::new("xclip")
-            .arg("-sel"): &mut Command
-            .arg("clip"): &mut Command
-            .stdin(Stdio::piped()): &mut Command
+            .arg("-sel")
+            .arg("clip")
+            .stdin(Stdio::piped())
             .spawn()
             .unwrap();
         let mut stdin: ChildStdin = cmd.stdin.take().unwrap();
@@ -673,7 +673,7 @@ impl<const N: usize> Cuboid<N> {
         2 * (0..N)
             .map(|k: usize| {
                 (0..N)
-                    .filter(|j: &usize| k != j)
+                    .filter(|&j: &usize| k != j)
                     .map(|j: usize| self.length(j))
                     .product::<i64>()
             })
@@ -752,7 +752,7 @@ impl<const N: usize> Cuboid<N> {
 }
 
 pub fn bounds_points<const N: usize>(i: impl IntoIterator<Item = Point<N>>) -> Cuboid<N> {
-    let mut i: impl Iterator<Item = Point<N>> = i.into_iter();
+    let mut i = i.into_iter();
 
     let first: Point<N> = i.next().expect("must have at least one point");
     let mut bounds = Cuboid {
@@ -812,9 +812,9 @@ impl<K: Eq + Hash + Clone, V: Clone + PartialEq> DefaultHashMapExt<K, V> for Def
     }
 
     fn undef(&self) -> HashMap<K, V> {
-        self.iter(): Iter<K, V>
-            .filter(|(_, v)| **v != self.default): Iter<K, V>
-            .map(|(k, v)| (k.clone(), v.clone())): Iter<K, V>
+        self.iter()
+            .filter(|(_, v)| **v != self.default)
+            .map(|(k, v)| (k.clone(), v.clone()))
             .collect()
     }
 
@@ -953,7 +953,7 @@ pub trait DisplayExt: Display {
     }
 
     fn ints(&self) -> Vec<i64> {
-        self.to_string(): String
+        self.to_string()
             .split(|c: char| !c.is_numeric() && c != '-')
             .filter_map(|x: &str| {
                 if x.is_empty() {
@@ -966,7 +966,7 @@ pub trait DisplayExt: Display {
     }
 
     fn uints(&self) -> Vec<usize> {
-        self.to_string(): String
+        self.to_string()
             .split(|c: char| !c.is_numeric())
             .filter_map(|x: &str| {
                 if x.is_empty() {
@@ -979,7 +979,7 @@ pub trait DisplayExt: Display {
     }
 
     fn uints2(&self) -> Vec<i64> {
-        self.to_string(): String
+        self.to_string()
             .split(|c: char| !c.is_numeric())
             .filter_map(|x: &str| {
                 if x.is_empty() {
@@ -992,14 +992,14 @@ pub trait DisplayExt: Display {
     }
 
     fn words(&self) -> Vec<String> {
-        self.to_string(): String
+        self.to_string()
             .split_whitespace()
             .map(|x: &str| x.to_string())
             .collect()
     }
 
     fn paragraphs(&self) -> Vec<String> {
-        self.to_string(): String
+        self.to_string()
             .split("\n\n")
             .map(|x: &str| x.to_string())
             .collect()
@@ -1010,7 +1010,7 @@ pub trait DisplayExt: Display {
     }
 
     fn digits(&self) -> Vec<i64> {
-        self.to_string(): String
+        self.to_string()
             .chars()
             .filter_map(|x: char| x.to_digit(10).map(|x: u32| x as i64))
             .collect()
@@ -1021,8 +1021,8 @@ pub trait DisplayExt: Display {
     }
 
     fn alphanumeric_words(&self) -> Vec<String> {
-        self.to_string(): String
-            .replace(|x: char| !x.is_alphanumeric(), ""): String
+        self.to_string()
+            .replace(|x: char| !x.is_alphanumeric(), "")
             .words()
     }
 
@@ -1284,9 +1284,9 @@ pub trait DebugExt: Debug + Sized {
     fn dbgr(&self) {
         let bt: Backtrace = Backtrace::capture();
         let file: &BacktraceFrame = bt
-            .frames(): &[BacktraceFrame]
+            .frames()
             .iter()
-            .find(|x: &&BacktraceFrame| format!("{x:?}").contains("/src/bin/")): Option<&BacktraceFrame>
+            .find(|x: &&BacktraceFrame| format!("{x:?}").contains("/src/bin/"))
             .unwrap();
         let trace: String = format!("{:?}", file);
         let trace: Split<&str> = trace.split(", ");
@@ -1295,7 +1295,7 @@ pub trait DebugExt: Debug + Sized {
             .split_once("/src/bin/")
             .unwrap()
             .1
-            .strip_suffix("\""): Option<&str>
+            .strip_suffix("\"")
             .unwrap();
         let line: i64 = line.ints()[0];
         eprintln!("[src/bin/{}:{}] {:#?}", file, line, self);
