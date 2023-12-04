@@ -57,6 +57,7 @@ dependencies = [
  "stringtools",
  "tap",
  "terminal_size",
+ "url",
 ]
 
 [[package]]
