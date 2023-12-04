@@ -408,9 +408,9 @@ impl<const N: usize> Cell<N> {
     }
 
     pub fn corners(&self) -> [Point<N>; count_corners(N)] {
-        from_fn(|i:usize| {
-            let mut point:Point<N> = self.point();
-            for n in 0.. N {
+        from_fn(|i: usize| {
+            let mut point: Point<N> = self.point();
+            for n in 0..N {
                 if i & (1 << n) != 0 {
                     point.0[n] += 1;
                 }
@@ -418,8 +418,6 @@ impl<const N: usize> Cell<N> {
             point
         })
     }
-
-
 
     pub fn corners_minmax(&self) -> [Point<N>; 2] {
         [self.point(), self.point() + Vector::new(from_fn(|_| 1))]
