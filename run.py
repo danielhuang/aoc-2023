@@ -1,6 +1,9 @@
-#!/usr/bin/env python
-
 import os
 import sys
+import subprocess
 
-os.execvp("cargo", ["cargo", "run", "--bin"] + sys.argv[1:])
+# Build the command to execute
+command = ["cargo", "run", "--bin"] + sys.argv[1:]
+
+# Use subprocess to execute the command
+subprocess.run(command)
