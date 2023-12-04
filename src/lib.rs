@@ -180,6 +180,50 @@ pub fn load_input() -> String {
         }
     };
 
+    //     } else {
+    //         let url = format!("https://adventofcode.com/2023/day/{}/input", day());
+    //         let path = format!("target/{}.input.txt", day());
+    //         let input = match read_to_string(&path) {
+    //             Ok(x) => x,
+    //             Err(e) => {
+    //                 println!("{e:?}");
+    //                 print!("Downloading input... ");
+    //                 io::stdout().flush().unwrap();
+    //                 match fetch(&url) {
+    //                     Ok(input) => {
+    //                         write_atomic(&path, &input);
+    //                         println!("done!");
+    //                         input
+    //                     }
+    //                     Err(e) => {
+    //                         dbg!(e);
+    //                         println!("testing session cookie...");
+    //                         assert!(fetch("https://adventofcode.com/2023")
+    //                             .unwrap()
+    //                             .contains("[Log Out]"));
+    //                         panic!("cookie works, input missing!")
+    //                     }
+    //                 }
+    //             }
+    //         };
+    //         let submitted_path = format!("target/{}.html", day());
+    //         let submitted = match metadata(&submitted_path) {
+    //             Ok(_) => true,
+    //             Err(_) => {
+    //                 let page = fetch(&format!("https://adventofcode.com/2023/day/{}", day())).unwrap();
+    //                 if page.contains(
+    //                     "Both parts of this puzzle are complete! They provide two gold stars: **",
+    //                 ) {
+    //                     write_atomic(&submitted_path, &page);
+    //                     true
+    //                 } else {
+    //                     false
+    //                 }
+    //             }
+    //         };
+    //         *SUBMITTED.lock().unwrap() = submitted;
+    //         input
+
     *START_TS.lock().unwrap() = Some(Instant::now());
 
     println!(
