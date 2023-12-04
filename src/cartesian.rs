@@ -94,11 +94,11 @@ impl<const N: usize> Point<N> {
     }
 
     pub fn adj(&self) -> [Self; N * 2] {
-        Vector::<N>::adj().map(|x| x + *self)
+        Vector::<N>::adj().map(|x: Vector<N>| x + *self)
     }
 
     pub fn adj_diag(&self) -> [Self; count_adj_diag(N)] {
-        Vector::<N>::adj_diag().map(|x| x + *self)
+        Vector::<N>::adj_diag().map(|x: Vector<N>| x + *self)
     }
 }
 
@@ -124,7 +124,7 @@ impl<const N: usize> Add for Vector<N> {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
-        Self(from_fn(|i| self.0[i] + rhs.0[i]))
+        Self(from_fn(|i: usize| self.0[i] + rhs.0[i]))
     }
 }
 
@@ -132,7 +132,7 @@ impl<const N: usize> Add<Point<N>> for Vector<N> {
     type Output = Point<N>;
 
     fn add(self, rhs: Point<N>) -> Self::Output {
-        Point(from_fn(|i| self.0[i] + rhs.0[i]))
+        Point(from_fn(|i: usize| self.0[i] + rhs.0[i]))
     }
 }
 
@@ -140,7 +140,7 @@ impl<const N: usize> Mul<i64> for Vector<N> {
     type Output = Self;
 
     fn mul(self, rhs: i64) -> Self::Output {
-        Self(self.0.map(|x| x * rhs))
+        Self(self.0.map(|x: i64| x * rhs))
     }
 }
 
@@ -148,7 +148,7 @@ impl<const N: usize> Div<i64> for Vector<N> {
     type Output = Self;
 
     fn div(self, rhs: i64) -> Self::Output {
-        Self(self.0.map(|x| x / rhs))
+        Self(self.0.map(|x: i64| x / rhs))
     }
 }
 
@@ -156,7 +156,7 @@ impl<const N: usize> Add<Vector<N>> for Point<N> {
     type Output = Self;
 
     fn add(self, rhs: Vector<N>) -> Self::Output {
-        Self(from_fn(|i| self.0[i] + rhs.0[i]))
+        Self(from_fn(|i: usize| self.0[i] + rhs.0[i]))
     }
 }
 
@@ -164,7 +164,7 @@ impl<const N: usize> Sub<Vector<N>> for Point<N> {
     type Output = Self;
 
     fn sub(self, rhs: Vector<N>) -> Self::Output {
-        Self(from_fn(|i| self.0[i] - rhs.0[i]))
+        Self(from_fn(|i: usize| self.0[i] - rhs.0[i]))
     }
 }
 
@@ -172,7 +172,7 @@ impl<const N: usize> Sub for Point<N> {
     type Output = Vector<N>;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        Vector(from_fn(|i| self.0[i] - rhs.0[i]))
+        Vector(from_fn(|i: usize| self.0[i] - rhs.0[i]))
     }
 }
 
@@ -180,7 +180,7 @@ impl<const N: usize> Sub for Vector<N> {
     type Output = Vector<N>;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        Vector(from_fn(|i| self.0[i] - rhs.0[i]))
+        Vector(from_fn(|i: usize| self.0[i] - rhs.0[i]))
     }
 }
 
@@ -218,11 +218,11 @@ pub trait Cartesian<const N: usize>:
     fn new(x: [i64; N]) -> Self;
 
     fn manhat(&self) -> i64 {
-        self.inner().into_iter().map(|x| x.abs()).sum()
+        self.inner().into_iter().map(|x: i64| x.abs()).sum()
     }
 
     fn manhat_diag(&self) -> i64 {
-        self.inner().into_iter().map(|x| x.abs()).max().unwrap()
+        self.inner().into_iter().map(|x: i64| x.abs()).max().unwrap()
     }
 
     fn point(&self) -> Point<N> {
@@ -240,25 +240,25 @@ pub trait Cartesian<const N: usize>:
 
 pub trait Cartesian2: Cartesian<2> {
     fn up(&self, n: i64) -> Self {
-        let mut x = self.inner();
+        let mut x: [i64; 2] = self.inner();
         x[1] += n;
         Self::new(x)
     }
 
     fn down(&self, n: i64) -> Self {
-        let mut x = self.inner();
+        let mut x: [i64; 2] = self.inner();
         x[1] -= n;
         Self::new(x)
     }
 
     fn left(&self, n: i64) -> Self {
-        let mut x = self.inner();
+        let mut x: [i64; 2] = self.inner();
         x[0] -= n;
         Self::new(x)
     }
 
     fn right(&self, n: i64) -> Self {
-        let mut x = self.inner();
+        let mut x: [i64; 2] = self.inner();
         x[0] += n;
         Self::new(x)
     }
@@ -268,10 +268,10 @@ pub trait Cartesian2: Cartesian<2> {
         if radius == 0 {
             return vec![*self];
         }
-        let mut output = vec![];
-        let mut pos = self.inner();
+        let mut output: Vec<Self> = vec![];
+        let mut pos: [i64; 2] = self.inner();
         pos[1] -= radius;
-        for (vel_x, vel_y) in [(1, 1), (-1, 1), (-1, -1), (1, -1)] {
+        for (vel_x , vel_y) in [(1, 1), (-1, 1), (-1, -1), (1, -1)] {
             for _ in 0..radius {
                 output.push(Self::new(pos));
                 pos[0] += vel_x;
@@ -282,7 +282,7 @@ pub trait Cartesian2: Cartesian<2> {
     }
 
     fn filled_diamond(&self, radius: i64) -> Vec<Self> {
-        (0..=radius).flat_map(|r| self.diamond(r)).collect()
+        (0..=radius).flat_map(|r: i64| self.diamond(r)).collect()
     }
 
     fn square_border(&self, radius: i64) -> Vec<Self> {
@@ -290,8 +290,8 @@ pub trait Cartesian2: Cartesian<2> {
         if radius == 0 {
             return vec![*self];
         }
-        let mut output = vec![];
-        let mut pos = self.down(radius).left(radius);
+        let mut output: Vec<Self> = vec![];
+        let mut pos: Self = self.down(radius).left(radius);
         for _ in 0..radius * 2 {
             output.push(pos);
             pos = pos.up(1);
@@ -312,7 +312,7 @@ pub trait Cartesian2: Cartesian<2> {
     }
 
     fn filled_square(&self, radius: i64) -> Vec<Self> {
-        (0..=radius).flat_map(|r| self.square_border(r)).collect()
+        (0..=radius).flat_map(|r: i64| self.square_border(r)).collect()
     }
 
     fn rotate3(&self) -> Self {
@@ -400,17 +400,17 @@ impl<const N: usize> Cell<N> {
     }
 
     pub fn adj(&self) -> [Self; N * 2] {
-        Vector::<N>::adj().map(|x| x + *self)
+        Vector::<N>::adj().map(|x: Vector<N>| x + *self)
     }
 
     pub fn adj_diag(&self) -> [Self; count_adj_diag(N)] {
-        Vector::<N>::adj_diag().map(|x| x + *self)
+        Vector::<N>::adj_diag().map(|x: Vector<N>| x + *self)
     }
 
     pub fn corners(&self) -> [Point<N>; count_corners(N)] {
-        from_fn(|i| {
-            let mut point = self.point();
-            for n in 0..N {
+        from_fn(|i:usize| {
+            let mut point:Point<N> = self.point();
+            for n in 0.. N {
                 if i & (1 << n) != 0 {
                     point.0[n] += 1;
                 }
@@ -418,6 +418,8 @@ impl<const N: usize> Cell<N> {
             point
         })
     }
+
+
 
     pub fn corners_minmax(&self) -> [Point<N>; 2] {
         [self.point(), self.point() + Vector::new(from_fn(|_| 1))]
@@ -440,14 +442,14 @@ impl<const N: usize> Vector<N> {
     pub fn adj_diag() -> [Self; count_adj_diag(N)] {
         let mut result = [Self::default(); count_adj_diag(N)];
 
-        let mut i = 0;
+        let mut i: usize = 0;
         let mut v = [-1; N];
         for _ in 0..(result.len() - 1) {
             if v.iter().all(|&x| x == 0) {
                 v[0] = 1;
             }
             result[i] = Self::new(v);
-            let mut j = 0;
+            let mut j: usize = 0;
             loop {
                 v[j] += 1;
                 if v[j] > 1 {
@@ -465,8 +467,8 @@ impl<const N: usize> Vector<N> {
     }
 
     pub fn adj() -> [Self; N * 2] {
-        from_fn(|i| {
-            let axis = i / 2;
+        from_fn(|i: usize| {
+            let axis: usize = i / 2;
             let mut result = Self::default().inner();
 
             result[axis] = if i % 2 == 0 { 1 } else { -1 };
@@ -483,7 +485,7 @@ impl<const N: usize> Vector<N> {
 
     /// reduces all axis values to 1, 0, or -1
     fn normalize_diag(self) -> Self {
-        Self(self.map(|x| x.signum()))
+        Self(self.map(|x: i64| x.signum()))
     }
 
     /// vector is a multiple of a basis vector (single axis)
@@ -512,7 +514,7 @@ impl<const N: usize> Add<Cell<N>> for Vector<N> {
     type Output = Cell<N>;
 
     fn add(self, rhs: Cell<N>) -> Self::Output {
-        Cell(from_fn(|i| self.0[i] + rhs.0[i]))
+        Cell(from_fn(|i: usize| self.0[i] + rhs.0[i]))
     }
 }
 
@@ -520,7 +522,7 @@ impl<const N: usize> Add<Vector<N>> for Cell<N> {
     type Output = Self;
 
     fn add(self, rhs: Vector<N>) -> Self::Output {
-        Self(from_fn(|i| self.0[i] + rhs.0[i]))
+        Self(from_fn(|i: usize| self.0[i] + rhs.0[i]))
     }
 }
 
@@ -528,7 +530,7 @@ impl<const N: usize> Sub<Vector<N>> for Cell<N> {
     type Output = Self;
 
     fn sub(self, rhs: Vector<N>) -> Self::Output {
-        Self(from_fn(|i| self.0[i] - rhs.0[i]))
+        Self(from_fn(|i: usize| self.0[i] - rhs.0[i]))
     }
 }
 
@@ -536,7 +538,7 @@ impl<const N: usize> Sub for Cell<N> {
     type Output = Vector<N>;
 
     fn sub(self, rhs: Self) -> Self::Output {
-        Vector(from_fn(|i| self.0[i] - rhs.0[i]))
+        Vector(from_fn(|i: usize| self.0[i] - rhs.0[i]))
     }
 }
 
@@ -598,7 +600,7 @@ impl<const N: usize> Matrix<N> {
 impl<const N: usize> Default for Matrix<N> {
     fn default() -> Self {
         Self {
-            cols: from_fn(|i| Vector(from_fn(|j| if i == j { 1 } else { 0 }))),
+            cols: from_fn(|i: usize| Vector(from_fn(|j: usize| if i == j { 1 } else { 0 }))),
         }
     }
 }
@@ -608,7 +610,7 @@ impl<const N: usize> Add for Matrix<N> {
 
     fn add(self, rhs: Self) -> Self::Output {
         Self {
-            cols: from_fn(|i| self.cols[i] + rhs.cols[i]),
+            cols: from_fn(|i: usize| self.cols[i] + rhs.cols[i]),
         }
     }
 }
@@ -618,7 +620,7 @@ impl<const N: usize> Sub for Matrix<N> {
 
     fn sub(self, rhs: Self) -> Self::Output {
         Self {
-            cols: from_fn(|i| self.cols[i] - rhs.cols[i]),
+            cols: from_fn(|i: usize| self.cols[i] - rhs.cols[i]),
         }
     }
 }
@@ -628,7 +630,7 @@ impl<const N: usize> Mul<i64> for Matrix<N> {
 
     fn mul(self, rhs: i64) -> Self::Output {
         Self {
-            cols: from_fn(|i| self.cols[i] * rhs),
+            cols: from_fn(|i: usize| self.cols[i] * rhs),
         }
     }
 }
@@ -637,9 +639,9 @@ impl<const N: usize> Mul<Vector<N>> for Matrix<N> {
     type Output = Vector<N>;
 
     fn mul(self, rhs: Vector<N>) -> Self::Output {
-        (0..N)
-            .map(|i| self.cols[i] * rhs[i])
-            .reduce(|a, b| a + b)
+        (0.. N)
+            .map(|i: usize| self.cols[i] * rhs[i])
+            .reduce(|a: Vector<N>, b: Vector<N> | a + b): Option<Vector<N>>
             .unwrap_or_default()
     }
 }
@@ -649,13 +651,13 @@ impl<const N: usize> Mul for Matrix<N> {
 
     fn mul(self, rhs: Self) -> Self::Output {
         Self {
-            cols: rhs.cols.map(|col| self * col),
+            cols: rhs.cols.map(|col: Vector<N>| self * col),
         }
     }
 }
 
 pub fn all_3d_rotations() -> Vec<Matrix<3>> {
-    let base = [
+    let base: [Vector<3>; 6] = [
         v3(1, 0, 0),
         v3(0, 1, 0),
         v3(0, 0, 1),
@@ -663,7 +665,7 @@ pub fn all_3d_rotations() -> Vec<Matrix<3>> {
         v3(0, -1, 0),
         v3(0, 0, -1),
     ];
-    let mut result = vec![];
+    let mut result: Vec<Matrix<3>> = vec![];
     for &v1 in &base {
         for &v2 in &base {
             if v1 != v2 && v1 * -1 != v2 {
@@ -690,7 +692,7 @@ pub trait Absolute<const N: usize>:
     }
 
     fn go_straight(self, vel: Vector<N>) -> impl Iterator<Item = Self> {
-        let mut pos = self;
+        let mut pos: Self = self;
         iter::from_fn(move || {
             pos += vel;
             Some(pos)
@@ -698,15 +700,15 @@ pub trait Absolute<const N: usize>:
     }
 
     fn goto_straight(self, dest: Self) -> Vec<Self> {
-        let unit = (dest - self).normalize();
-        std::iter::once(self)
+        let unit: Vector<N> = (dest - self).normalize();
+        iter::once(self)
             .chain(self.go_straight(unit).take((dest - self).manhat() as _))
             .collect()
     }
 
     fn goto(self, dest: Self) -> Vec<Self> {
-        let unit = (dest - self).normalize_diag();
-        let result: Vec<_> = std::iter::once(self)
+        let unit: Vector<N> = (dest - self).normalize_diag();
+        let result: Vec<_> = iter::once(self)
             .chain(
                 self.go_straight(unit)
                     .take((dest - self).manhat_diag() as _),
