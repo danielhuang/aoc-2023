@@ -64,17 +64,17 @@ impl Printer {
                 let pos: Cell<2> = c2(c, r);
                 let c: char = self
                     .layers
-                    .iter(): Vec<_>
-                    .rev(): Rev<*mut Vec<_>>
+                    .iter()
+                    .rev()
                     .find(|x| x.points.contains(&pos) && x.c != ' ')
-                    .map(|x| x.c): Option<char>
+                    .map(|x| x.c)
                     .unwrap_or(self.background[pos]);
                 let display: String = self
                     .layers
                     .iter()
                     .rev()
-                    .enumerate(): Rev<_>
-                    .find(|(_, x)| x.points.contains(&pos)): Option<_>
+                    .enumerate()
+                    .find(|(_, x)| x.points.contains(&pos))
                     .map(|(i, _)| match i % 6 {
                         0 => c.blue().to_string(),
                         1 => c.red().to_string(),
@@ -83,7 +83,7 @@ impl Printer {
                         4 => c.magenta().to_string(),
                         5 => c.purple().to_string(),
                         _ => unreachable!(),
-                    }): Option<String>
+                    })
                     .unwrap_or(self.background[pos].to_string());
                 print!("{display}");
             }
