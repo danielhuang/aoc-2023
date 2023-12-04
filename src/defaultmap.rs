@@ -89,7 +89,7 @@ impl<K: Eq + Hash, V: Clone> DefaultHashMap<K, V> {
     /// Usually the `map[key] = new_val` is prefered over using `get_mut` directly.
     /// This method only accepts owned values as the key.
     pub fn get_mut(&mut self, key: K) -> &mut V {
-        let default = &self.default;
+        let default: &V = &self.default;
         self.map.entry(key).or_insert_with(|| default.clone())
     }
 }
