@@ -45,7 +45,7 @@ fn main() {
                             digits.push(grid[x]);
                             x = x.right(1);
                         }
-                        prod *= digits.ii().map(|x| x.tos()).join("").int();
+                        prod *= digits.collect_string().int();
                     }
                     sum += prod;
                 }
@@ -58,7 +58,7 @@ fn main() {
                     digits.push(grid[x]);
                     x = x.right(1);
                 }
-                sum += digits.ii().map(|x| x.tos()).join("").int();
+                sum += digits.collect_string().int();
             }
         }
 

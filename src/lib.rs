@@ -347,41 +347,6 @@ pub fn transpose<T: Default + Clone>(
     transpose_vec(collect_2d(s))
 }
 
-pub trait DisplayExt {
-    fn int(&self) -> i64;
-    fn uint(&self) -> usize;
-    fn velocity(&self) -> Vector2;
-}
-
-impl<T: Display> DisplayExt for T {
-    #[track_caller]
-    fn int(&self) -> i64 {
-        self.to_string().trim().parse().unwrap_or_else(
-            #[track_caller]
-            |_| panic!("tried to parse {} as int", self),
-        )
-    }
-
-    #[track_caller]
-    fn uint(&self) -> usize {
-        self.to_string().trim().parse().unwrap_or_else(
-            #[track_caller]
-            |_| panic!("tried to parse {} as uint", self),
-        )
-    }
-
-    #[track_caller]
-    fn velocity(&self) -> Vector2 {
-        match self.to_string().as_str() {
-            "^" | "u" | "U" => v2(0, 1),
-            "v" | "V" | "d" | "D" => v2(0, -1),
-            "<" | "l" | "L" => v2(-1, 0),
-            ">" | "r" | "R" => v2(1, 0),
-            _ => unreachable!(),
-        }
-    }
-}
-
 pub fn set_n<T: Eq + Hash + Clone>(
     a: impl IntoIterator<Item = T>,
     b: impl IntoIterator<Item = T>,
@@ -968,13 +933,34 @@ pub fn grab_unums<const N: usize>(s: &str) -> [usize; N] {
     s.grab().uints().ca()
 }
 
-pub trait StringExt: ToString {
+pub trait DisplayExt: Display {
     fn grab(&self) -> String {
         self.to_string()
     }
 
     fn tos(&self) -> String {
         self.to_string()
+    }
+
+    #[track_caller]
+    fn int(&self) -> i64 {
+        self.to_string().trim().parse().unwrap_or_else(
+            #[track_caller]
+            |_| panic!("tried to parse {} as int", self),
+        )
+    }
+
+    #[track_caller]
+    fn uint(&self) -> usize {
+        self.to_string().trim().parse().unwrap_or_else(
+            #[track_caller]
+            |_| panic!("tried to parse {} as uint", self),
+        )
+    }
+
+    #[track_caller]
+    fn velocity(&self) -> Vector2 {
+        charvel(self.to_string().chars().next().unwrap())
     }
 
     fn ints(&self) -> Vec<i64> {
@@ -1070,7 +1056,7 @@ pub trait StringExt: ToString {
     }
 }
 
-impl<T: ToString> StringExt for T {}
+impl<T: Display> DisplayExt for T {}
 
 #[derive(Default, Clone)]
 pub struct OpaqueId {
@@ -1344,4 +1330,23 @@ impl<T: Debug> DebugExt for T {}
 pub fn bar() {
     let size = terminal_size::terminal_size().unwrap();
     eprintln!("{}", "⎯".repeat(size.0 .0 as usize))
+}
+
+pub fn unparse_grid(grid: &DefaultHashMap<Cell<2>, char>) -> String {
+    let b = bounds(grid.find(|x| x != grid.default));
+    let mut s = String::new();
+    let mut i = 0;
+    for cell in b.cells() {
+        s.push(grid[cell]);
+        i += 1;
+        if i == b.length(0) {
+            i = 0;
+            s.push('\n');
+        }
+    }
+    s
+}
+
+pub fn zip<T, U>(a: impl IntoIterator<Item = T>, b: impl IntoIterator<Item = U>) -> Vec<(T, U)> {
+    a.into_iter().zip(b.into_iter()).collect()
 }

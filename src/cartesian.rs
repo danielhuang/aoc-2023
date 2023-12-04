@@ -492,6 +492,14 @@ impl<const N: usize> Vector<N> {
     }
 }
 
+impl Vector<2> {
+    pub fn cross(&self, other: Self) -> i64 {
+        let Vector([a, b]) = self;
+        let Vector([x, y]) = other;
+        a * y - b * x
+    }
+}
+
 impl Vector<3> {
     pub fn cross(&self, other: Self) -> Self {
         let Vector([a, b, c]) = self;
@@ -717,10 +725,10 @@ impl<const N: usize> Absolute<N> for Cell<N> {}
 #[track_caller]
 pub fn charvel(c: char) -> Vector<2> {
     match c {
-        '^' => v2(0, 1),
-        'v' | 'V' => v2(0, -1),
-        '<' => v2(-1, 0),
-        '>' => v2(1, 0),
+        '^' | 'U' | 'u' => v2(0, 1),
+        'v' | 'V' | 'D' | 'd' => v2(0, -1),
+        '<' | 'L' | 'l' => v2(-1, 0),
+        '>' | 'R' | 'r' => v2(1, 0),
         _ => panic!("charvel: {c} is not a valid direction"),
     }
 }
