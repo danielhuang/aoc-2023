@@ -1,12 +1,10 @@
 use std::{collections::HashSet, fmt::Display};
+use std::iter::Rev;
 
 use crate::defaultmap::DefaultHashMap;
 use owo_colors::OwoColorize;
 
-use crate::{
-    bounds,
-    cartesian::{c2, Cell2},
-};
+use crate::{bounds, cartesian::{c2, Cell2}, Cell, Cuboid};
 
 struct Layer {
     points: HashSet<Cell2>,
@@ -49,7 +47,7 @@ impl Printer {
     }
 
     pub fn print(self) {
-        let mut all_points = HashSet::new();
+        let mut all_points: HashSet<Cell2> = HashSet::new();
         for layer in &self.layers {
             all_points.extend(layer.points.clone());
         }
@@ -60,23 +58,23 @@ impl Printer {
             println!("printer has nothing to print");
             return;
         }
-        let b = bounds(all_points);
+        let b: Cuboid<2> = bounds(all_points);
         for r in (b.min[1]..=b.max[1]).rev() {
             for c in b.min[0]..=b.max[0] {
-                let pos = c2(c, r);
-                let c = self
+                let pos: Cell<2> = c2(c, r);
+                let c: char = self
                     .layers
-                    .iter()
-                    .rev()
+                    .iter(): Vec<_>
+                    .rev(): Rev<*mut Vec<_>>
                     .find(|x| x.points.contains(&pos) && x.c != ' ')
-                    .map(|x| x.c)
+                    .map(|x| x.c): Option<char>
                     .unwrap_or(self.background[pos]);
-                let display = self
+                let display: String = self
                     .layers
                     .iter()
                     .rev()
-                    .enumerate()
-                    .find(|(_, x)| x.points.contains(&pos))
+                    .enumerate(): Rev<_>
+                    .find(|(_, x)| x.points.contains(&pos)): Option<_>
                     .map(|(i, _)| match i % 6 {
                         0 => c.blue().to_string(),
                         1 => c.red().to_string(),
@@ -85,7 +83,7 @@ impl Printer {
                         4 => c.magenta().to_string(),
                         5 => c.purple().to_string(),
                         _ => unreachable!(),
-                    })
+                    }): Option<String>
                     .unwrap_or(self.background[pos].to_string());
                 print!("{display}");
             }
