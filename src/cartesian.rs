@@ -641,7 +641,7 @@ impl<const N: usize> Mul<Vector<N>> for Matrix<N> {
     fn mul(self, rhs: Vector<N>) -> Self::Output {
         (0.. N)
             .map(|i: usize| self.cols[i] * rhs[i])
-            .reduce(|a: Vector<N>, b: Vector<N> | a + b): Option<Vector<N>>
+            .reduce(|a: Vector<N>, b: Vector<N> | a + b)
             .unwrap_or_default()
     }
 }
