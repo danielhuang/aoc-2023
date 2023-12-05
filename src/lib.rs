@@ -148,6 +148,7 @@ pub fn load_input() -> String {
     let input = if DEBUG {
         let sample = read_to_string(format!("src/bin/{}.sample.txt", day())).unwrap();
         if sample.trim().is_empty() {
+            println!("sample input file is empty");
             println!("{}", "reading sample input from clipboard!!".red().bold());
             read_clipboard().unwrap()
         } else {
@@ -541,44 +542,50 @@ impl Intervals {
         }
     }
 
-    pub fn add(&mut self, start: i64, end: i64) {
-        match (self.is_inside(start), self.is_inside(end)) {
+    pub fn add(&mut self, start_inclusive: i64, end_exclusive: i64) {
+        match (
+            self.is_inside(start_inclusive),
+            self.is_inside(end_exclusive),
+        ) {
             (true, true) => {
-                self.remove_between((start + 1)..=end);
+                self.remove_between((start_inclusive + 1)..=end_exclusive);
             }
             (true, false) => {
-                self.remove_between((start + 1)..=end);
-                self.bounds.insert(end, IntervalEdge::End);
+                self.remove_between((start_inclusive + 1)..=end_exclusive);
+                self.bounds.insert(end_exclusive, IntervalEdge::End);
             }
             (false, true) => {
-                self.remove_between((start + 1)..=end);
-                self.bounds.insert(start, IntervalEdge::Start);
+                self.remove_between((start_inclusive + 1)..=end_exclusive);
+                self.bounds.insert(start_inclusive, IntervalEdge::Start);
             }
             (false, false) => {
-                self.remove_between((start + 1)..=end);
-                self.bounds.insert(start, IntervalEdge::Start);
-                self.bounds.insert(end, IntervalEdge::End);
+                self.remove_between((start_inclusive + 1)..=end_exclusive);
+                self.bounds.insert(start_inclusive, IntervalEdge::Start);
+                self.bounds.insert(end_exclusive, IntervalEdge::End);
             }
         }
     }
 
-    pub fn remove(&mut self, start: i64, end: i64) {
-        match (self.is_inside(start), self.is_inside(end)) {
+    pub fn remove(&mut self, start_inclusive: i64, end_exclusive: i64) {
+        match (
+            self.is_inside(start_inclusive),
+            self.is_inside(end_exclusive),
+        ) {
             (true, true) => {
-                self.remove_between(start..end);
-                self.bounds.insert(start, IntervalEdge::End);
-                self.bounds.insert(end, IntervalEdge::Start);
+                self.remove_between(start_inclusive..end_exclusive);
+                self.bounds.insert(start_inclusive, IntervalEdge::End);
+                self.bounds.insert(end_exclusive, IntervalEdge::Start);
             }
             (true, false) => {
-                self.remove_between(start..end);
-                self.bounds.insert(start, IntervalEdge::End);
+                self.remove_between(start_inclusive..end_exclusive);
+                self.bounds.insert(start_inclusive, IntervalEdge::End);
             }
             (false, true) => {
-                self.remove_between(start..end);
-                self.bounds.insert(end, IntervalEdge::Start);
+                self.remove_between(start_inclusive..end_exclusive);
+                self.bounds.insert(end_exclusive, IntervalEdge::Start);
             }
             (false, false) => {
-                self.remove_between(start..end);
+                self.remove_between(start_inclusive..end_exclusive);
             }
         }
     }
@@ -805,6 +812,7 @@ pub trait DefaultHashMapExt<K, V> {
         V: IntoIterator,
         <V as IntoIterator>::Item: Clone,
         <V as IntoIterator>::Item: std::cmp::Eq + Hash;
+    fn subset(&self, f: impl FnMut(K) -> bool) -> Self;
 }
 
 impl<K: Eq + Hash + Clone, V: Clone + PartialEq> DefaultHashMapExt<K, V> for DefaultHashMap<K, V> {
@@ -855,6 +863,17 @@ impl<K: Eq + Hash + Clone, V: Clone + PartialEq> DefaultHashMapExt<K, V> for Def
             }
         }
         map
+    }
+
+    fn subset(&self, mut f: impl FnMut(K) -> bool) -> Self {
+        let mut new = self.clone();
+        new.clear();
+        for key in self.keys() {
+            if f(key.clone()) {
+                new[key.clone()] = self[key.clone()].clone();
+            }
+        }
+        new
     }
 }
 
@@ -1349,4 +1368,23 @@ pub fn unparse_grid(grid: &DefaultHashMap<Cell<2>, char>) -> String {
 
 pub fn zip<T, U>(a: impl IntoIterator<Item = T>, b: impl IntoIterator<Item = U>) -> Vec<(T, U)> {
     a.into_iter().zip(b.into_iter()).collect()
+}
+
+pub fn derivative<T: std::ops::Sub<Output = T> + Clone>(a: &[T]) -> Vec<T> {
+    let mut result = vec![];
+    if let Some(first) = a.first() {
+        result.push(first.clone());
+    }
+    for i in 1..a.len() {
+        result.push(a[i].clone() - a[i - 1].clone());
+    }
+    result
+}
+
+pub fn linear_regression(p1: Point<2>, p2: Point<2>, x: i64) -> Rational64 {
+    let Point([x1, y1]) = p1;
+    let Point([x2, y2]) = p2;
+    let a = Rational64::new(y2 - y1, x2 - x1);
+    let b = Rational64::new(y2, 1) - a * Rational64::new(x2, 1);
+    a * Rational64::new(x, 1) + b
 }
