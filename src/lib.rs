@@ -56,6 +56,7 @@ use std::io::Read;
 pub use std::io::Write;
 pub use std::iter::from_fn;
 pub use std::ops::Mul;
+use std::ops::Range;
 use std::ops::RangeBounds;
 pub use std::process::{Command, Stdio};
 use std::ptr::null;
@@ -388,6 +389,13 @@ pub trait ExtraItertools: IntoIterator + Sized {
         self.ii().map(|x| x.to_string()).collect()
     }
 
+    fn cstr(self) -> String
+    where
+        Self::Item: Display,
+    {
+        self.collect_string()
+    }
+
     fn cii(&self) -> std::vec::IntoIter<Self::Item>
     where
         Self: Clone,
@@ -452,7 +460,7 @@ pub trait ExtraItertools: IntoIterator + Sized {
     }
 }
 
-impl<T: IntoIterator + Sized + Clone> ExtraItertools for T {}
+impl<T: IntoIterator + Sized> ExtraItertools for T {}
 
 pub fn freqs<T: Hash + Eq>(i: impl IntoIterator<Item = T>) -> DefaultHashMap<T, usize> {
     let mut result = DefaultHashMap::new(0);
@@ -543,34 +551,43 @@ impl Intervals {
     }
 
     pub fn add(&mut self, start_inclusive: i64, end_exclusive: i64) {
-        match (
-            self.is_inside(start_inclusive),
-            self.is_inside(end_exclusive),
-        ) {
+        if end_exclusive <= start_inclusive {
+            return;
+        }
+
+        match (self.contains(start_inclusive), self.contains(end_exclusive)) {
             (true, true) => {
-                self.remove_between((start_inclusive + 1)..=end_exclusive);
+                self.remove_between(start_inclusive..=end_exclusive);
             }
             (true, false) => {
-                self.remove_between((start_inclusive + 1)..=end_exclusive);
+                self.remove_between(start_inclusive..=end_exclusive);
                 self.bounds.insert(end_exclusive, IntervalEdge::End);
             }
             (false, true) => {
-                self.remove_between((start_inclusive + 1)..=end_exclusive);
-                self.bounds.insert(start_inclusive, IntervalEdge::Start);
+                self.remove_between(start_inclusive..=end_exclusive);
             }
             (false, false) => {
-                self.remove_between((start_inclusive + 1)..=end_exclusive);
-                self.bounds.insert(start_inclusive, IntervalEdge::Start);
+                self.remove_between(start_inclusive..=end_exclusive);
                 self.bounds.insert(end_exclusive, IntervalEdge::End);
             }
         }
+        if !self.contains(start_inclusive) {
+            self.bounds.insert(start_inclusive, IntervalEdge::Start);
+        }
+        assert!(self.contains(start_inclusive));
+        assert!(self.contains(end_exclusive - 1));
+    }
+
+    pub fn add_one(&mut self, x: i64) {
+        self.add(x, x + 1);
     }
 
     pub fn remove(&mut self, start_inclusive: i64, end_exclusive: i64) {
-        match (
-            self.is_inside(start_inclusive),
-            self.is_inside(end_exclusive),
-        ) {
+        if end_exclusive <= start_inclusive {
+            return;
+        }
+
+        match (self.contains(start_inclusive), self.contains(end_exclusive)) {
             (true, true) => {
                 self.remove_between(start_inclusive..end_exclusive);
                 self.bounds.insert(start_inclusive, IntervalEdge::End);
@@ -588,18 +605,34 @@ impl Intervals {
                 self.remove_between(start_inclusive..end_exclusive);
             }
         }
+        assert!(!self.contains(start_inclusive));
+        assert!(!self.contains(end_exclusive - 1));
     }
 
     pub fn remove_one(&mut self, x: i64) {
         self.remove(x, x + 1);
     }
 
-    pub fn is_inside(&self, x: i64) -> bool {
+    pub fn contains(&self, x: i64) -> bool {
         if let Some(edge) = self.bounds.range(..=x).next_back() {
             edge.1 == &IntervalEdge::Start
         } else {
             false
         }
+    }
+
+    pub fn contains_all(&self, start_inclusive: i64, end_exclusive: i64) -> bool {
+        if start_inclusive <= end_exclusive {
+            return true;
+        }
+
+        self.contains(start_inclusive)
+            && self.contains(end_exclusive - 1)
+            && self
+                .bounds
+                .range((start_inclusive + 1)..end_exclusive)
+                .next()
+                .is_none()
     }
 
     pub fn covered_size(&self) -> i64 {
@@ -613,6 +646,150 @@ impl Intervals {
             }
         }
         total
+    }
+
+    pub fn iter(&self) -> IntervalsIter<'_> {
+        IntervalsIter {
+            intervals: self,
+            last_seen_upward: None,
+            last_seen_downward: None,
+        }
+    }
+
+    pub fn split_off(&mut self, lowest_right_value: i64) -> Self {
+        let patch_left = self.contains(lowest_right_value - 1);
+        let patch_right = self.contains(lowest_right_value);
+        let mut right = self.bounds.split_off(&lowest_right_value);
+        if patch_left {
+            self.bounds.insert(lowest_right_value, IntervalEdge::End);
+        }
+        if patch_right {
+            right.insert(lowest_right_value, IntervalEdge::Start);
+        }
+        if let Some(first) = right.iter().next().map(|(k, v)| (*k, *v)) {
+            if first.1 == IntervalEdge::End {
+                right.remove(&first.0);
+            }
+        }
+        Self { bounds: right }
+    }
+
+    pub fn split_at(mut self, lowest_right_value: i64) -> (Self, Self) {
+        let right = self.split_off(lowest_right_value);
+        (self, right)
+    }
+
+    pub fn all_intervals(&self) -> impl Iterator<Item = Range<i64>> + '_ {
+        let mut iter = self.bounds.iter();
+        std::iter::from_fn(move || {
+            let (&lo, lo_edge) = iter.next()?;
+            let (&hi, hi_edge) = iter.next()?;
+            assert!(lo_edge == &IntervalEdge::Start);
+            assert!(hi_edge == &IntervalEdge::End);
+            Some(lo..hi)
+        })
+    }
+
+    pub fn extend(&mut self, other: &Self) {
+        for interval in other.all_intervals() {
+            self.add(interval.start, interval.end);
+        }
+    }
+
+    pub fn union(mut a: Self, b: Self) -> Self {
+        a.extend(&b);
+        a
+    }
+
+    pub fn take_range(&mut self, start_inclusive: i64, end_exclusive: i64) -> Self {
+        let mid_right = self.split_off(start_inclusive);
+        let (mid, right) = mid_right.split_at(end_exclusive);
+        for interval in right.all_intervals() {
+            self.add(interval.start, interval.end);
+        }
+        mid
+    }
+
+    pub fn subtract(&mut self, to_remove: &Intervals) {
+        for interval in to_remove.all_intervals() {
+            self.remove(interval.start, interval.end);
+        }
+    }
+
+    pub fn shift(&mut self, offset: i64) {
+        self.bounds = std::mem::take(&mut self.bounds)
+            .into_iter()
+            .map(|(k, v)| (k + offset, v))
+            .collect();
+    }
+}
+
+#[derive(Clone)]
+pub struct IntervalsIter<'a> {
+    last_seen_upward: Option<i64>,
+    last_seen_downward: Option<i64>,
+    intervals: &'a Intervals,
+}
+
+impl<'a> Iterator for IntervalsIter<'a> {
+    type Item = i64;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(last_seen_upward) = self.last_seen_upward {
+            if self.intervals.contains(last_seen_upward + 1) {
+                self.last_seen_upward = Some(last_seen_upward + 1);
+                assert!(self.intervals.contains(last_seen_upward + 1));
+                Some(last_seen_upward + 1)
+            } else {
+                for (num, bound) in self.intervals.bounds.range((last_seen_upward + 1)..) {
+                    if bound == &IntervalEdge::Start {
+                        self.last_seen_upward = Some(*num);
+                        assert!(self.intervals.contains(*num));
+                        return Some(*num);
+                    }
+                }
+                None
+            }
+        } else {
+            for (num, bound) in self.intervals.bounds.iter() {
+                if bound == &IntervalEdge::Start {
+                    self.last_seen_upward = Some(*num);
+                    assert!(self.intervals.contains(*num));
+                    return Some(*num);
+                }
+            }
+            None
+        }
+    }
+}
+
+impl<'a> DoubleEndedIterator for IntervalsIter<'a> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if let Some(last_seen_downward) = self.last_seen_downward {
+            if self.intervals.contains(last_seen_downward - 1) {
+                self.last_seen_downward = Some(last_seen_downward - 1);
+                assert!(self.intervals.contains(last_seen_downward - 1));
+                Some(last_seen_downward - 1)
+            } else {
+                for (num, bound) in self.intervals.bounds.range(..=last_seen_downward).rev() {
+                    if bound == &IntervalEdge::End {
+                        self.last_seen_downward = Some(*num - 1);
+                        assert!(self.intervals.contains(*num - 1));
+                        return Some(*num - 1);
+                    }
+                }
+                None
+            }
+        } else {
+            for (num, bound) in self.intervals.bounds.iter().rev() {
+                if bound == &IntervalEdge::End {
+                    self.last_seen_downward = Some(*num - 1);
+                    assert!(self.intervals.contains(*num - 1));
+                    return Some(*num - 1);
+                }
+            }
+            None
+        }
     }
 }
 
@@ -1388,3 +1565,7 @@ pub fn linear_regression(p1: Point<2>, p2: Point<2>, x: i64) -> Rational64 {
     let b = Rational64::new(y2, 1) - a * Rational64::new(x2, 1);
     a * Rational64::new(x, 1) + b
 }
+
+// wait a minute...
+pub const INF: i64 = i64::MAX;
+// shhhhh its big enough

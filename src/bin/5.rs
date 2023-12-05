@@ -16,43 +16,31 @@ fn main() {
         maps.push(map);
     }
 
+    let nums = input.lines().next().unwrap().ints();
+
     for part2 in [false, true] {
-        let seeds = if part2 {
-            let all_ints = input.uints2();
-            let mut all_ints_extended = vec![];
-            for &a in all_ints.iter() {
-                for &b in all_ints.iter() {
-                    all_ints_extended.push(a + b);
-                    all_ints_extended.push(a - b);
-                    all_ints_extended.push(a);
-                    all_ints_extended.push(b);
-                }
+        let mut seeds = Intervals::default();
+        if part2 {
+            for (&start, &len) in nums.iter().tuples() {
+                seeds.add(start, start + len);
             }
-            let all_ints: BTreeSet<_> = all_ints_extended.ii().collect();
-            let mut seeds = vec![];
-            for (a, b) in input.lines().next().unwrap().ints().ii().tuples() {
-                let range = a..(a + b);
-                seeds.extend(all_ints.range(range));
-            }
-            seeds
         } else {
-            input.lines().next().unwrap().ints()
+            for &num in &nums {
+                seeds.add_one(num);
+            }
         };
 
-        let mut cands = vec![];
-        for mut seed in seeds {
-            for map in maps.iter() {
-                let mut new_seed = seed;
-                for &[dest, src, len] in map {
-                    if (src..(src + len)).contains(&seed) {
-                        new_seed = seed - src + dest;
-                    }
-                }
-                seed = new_seed;
+        for map in maps.iter() {
+            let mut next = Intervals::default();
+            for &[dest, src, len] in map {
+                let mut taken = seeds.take_range(src, src + len);
+                taken.shift(dest - src);
+                next.extend(&taken);
             }
-            cands.push(seed);
+            next.extend(&seeds);
+            seeds = next;
         }
 
-        cp(min(cands));
+        cp(seeds.iter().next().unwrap());
     }
 }
