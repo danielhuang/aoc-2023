@@ -990,6 +990,12 @@ pub trait DefaultHashMapExt<K, V> {
         <V as IntoIterator>::Item: Clone,
         <V as IntoIterator>::Item: std::cmp::Eq + Hash;
     fn subset(&self, f: impl FnMut(K) -> bool) -> Self;
+    fn map_key<T: Eq + Hash + Clone>(&self, f: impl FnMut(K) -> T) -> DefaultHashMap<T, V>
+    where
+        V: Clone;
+    fn map_value<U: Clone>(&self, f: impl FnMut(V) -> U) -> DefaultHashMap<K, U>
+    where
+        K: Eq + Hash + Clone;
 }
 
 impl<K: Eq + Hash + Clone, V: Clone + PartialEq> DefaultHashMapExt<K, V> for DefaultHashMap<K, V> {
@@ -1049,6 +1055,22 @@ impl<K: Eq + Hash + Clone, V: Clone + PartialEq> DefaultHashMapExt<K, V> for Def
             if f(key.clone()) {
                 new[key.clone()] = self[key.clone()].clone();
             }
+        }
+        new
+    }
+
+    fn map_key<T: Eq + Hash + Clone>(&self, mut f: impl FnMut(K) -> T) -> DefaultHashMap<T, V> {
+        let mut new = DefaultHashMap::new(self.default.clone());
+        for key in self.keys() {
+            new[f(key.clone())] = self[key.clone()].clone();
+        }
+        new
+    }
+
+    fn map_value<U: Clone>(&self, mut f: impl FnMut(V) -> U) -> DefaultHashMap<K, U> {
+        let mut new = DefaultHashMap::new(f(self.default.clone()));
+        for key in self.keys() {
+            new[key.clone()] = f(self[key.clone()].clone());
         }
         new
     }
