@@ -8,8 +8,8 @@ fn main() {
     for part2 in [false, true] {
         let (time, distance) = if part2 {
             (
-                time.replace(" ", "").ints(),
-                distance.replace(" ", "").ints(),
+                time.replace(' ', "").ints(),
+                distance.replace(' ', "").ints(),
             )
         } else {
             (time.ints(), distance.ints())

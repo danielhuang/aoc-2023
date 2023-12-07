@@ -40,11 +40,11 @@ impl<K: Eq + Hash, V: Default + Clone> From<HashMap<K, V>> for DefaultHashMap<K,
     }
 }
 
-impl<K: Eq + Hash, V: Clone> Into<HashMap<K, V>> for DefaultHashMap<K, V> {
+impl<K: Eq + Hash, V: Clone> From<DefaultHashMap<K, V>> for HashMap<K, V> {
     /// The into method can be used to convert a `DefaultHashMap` back into a
     /// `HashMap`.
-    fn into(self) -> HashMap<K, V> {
-        self.map
+    fn from(val: DefaultHashMap<K, V>) -> Self {
+        val.map
     }
 }
 
@@ -96,7 +96,7 @@ impl<K: Eq + Hash, V: Clone> DefaultHashMap<K, V> {
 
 /// Implements the `Index` trait so you can do `map[key]`.
 /// Nonmutable indexing can be done both by passing a reference or an owned value as the key.
-impl<'a, K: Eq + Hash, KB: Borrow<K>, V: Clone> Index<KB> for DefaultHashMap<K, V> {
+impl<K: Eq + Hash, KB: Borrow<K>, V: Clone> Index<KB> for DefaultHashMap<K, V> {
     type Output = V;
 
     fn index(&self, index: KB) -> &V {

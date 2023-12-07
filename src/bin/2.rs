@@ -15,7 +15,7 @@ fn main() {
         for round in game {
             for cube in round.split(", ") {
                 let amount = cube.ints()[0];
-                let color = cube.split(" ").nth(1).unwrap();
+                let color = cube.split(' ').nth(1).unwrap();
                 if color == "blue" {
                     blue = blue.max(amount);
                 }

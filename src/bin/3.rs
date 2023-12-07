@@ -11,7 +11,7 @@ fn main() {
         let symbols = if part2 {
             grid.find(|x| x == '*')
         } else {
-            grid.find(|x| !x.is_digit(10) && x != '.')
+            grid.find(|x| !x.is_ascii_digit() && x != '.')
         };
 
         let all_digits = grid.find(|x| x.is_ascii_digit()).cset();
@@ -20,7 +20,7 @@ fn main() {
         for pos in all_digits.clone() {
             let mut points = vec![];
             let mut x = pos;
-            while grid[x].is_digit(10) {
+            while grid[x].is_ascii_digit() {
                 points.push(x);
                 x = x.right(1);
             }
@@ -41,7 +41,7 @@ fn main() {
                     let mut prod = 1;
                     for mut x in points {
                         let mut digits = vec![];
-                        while grid[x].is_digit(10) {
+                        while grid[x].is_ascii_digit() {
                             digits.push(grid[x]);
                             x = x.right(1);
                         }
@@ -54,7 +54,7 @@ fn main() {
             let all_numbers = adjacent_numbers.values().flatten().copied().cset();
             for mut x in all_numbers {
                 let mut digits = vec![];
-                while grid[x].is_digit(10) {
+                while grid[x].is_ascii_digit() {
                     digits.push(grid[x]);
                     x = x.right(1);
                 }

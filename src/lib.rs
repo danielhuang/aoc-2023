@@ -215,7 +215,7 @@ pub fn load_input() -> String {
         println!("{}", line.blue());
     }
     let last = lines.next_back();
-    if let Some(_) = lines.next() {
+    if lines.next().is_some() {
         println!("(... {} more lines)", lines.count() + 1);
     }
     if let Some(line) = last {
@@ -244,41 +244,37 @@ pub fn cp(x: impl Display) {
             x.blue().bold(),
             elapsed.yellow()
         );
-    } else {
-        if *SUBMITTED.lock().unwrap() {
-            let page_html = read_to_string(format!("target/{}.html", day())).unwrap();
-            let mut correct_answers = vec![];
-            for line in page_html.lines() {
-                if let Some(line) = line.strip_prefix("<p>Your puzzle answer was <code>") {
-                    let (line, _) = line.split_once("</code>.</p>").unwrap();
-                    correct_answers.push(line.to_string());
-                }
-            }
-            if correct_answers[*copies - 1] == x.to_string() {
-                println!(
-                    "value: {} (correct!) took {}",
-                    x.green().bold(),
-                    elapsed.yellow()
-                );
-            } else {
-                println!(
-                    "value: {} (incorrect answer) took {}",
-                    x.red().bold(),
-                    elapsed.yellow()
-                );
-            }
-        } else {
-            if env::var("AOC_COPY_CLIPBOARD").is_ok() {
-                force_copy(&x);
-                println!("value: {} (copied to clipboard)", x.green().bold());
-            } else {
-                println!(
-                    "value: {} (set AOC_COPY_CLIPBOARD=1 to enable copy) took {}",
-                    x.green().bold(),
-                    elapsed.yellow()
-                );
+    } else if *SUBMITTED.lock().unwrap() {
+        let page_html = read_to_string(format!("target/{}.html", day())).unwrap();
+        let mut correct_answers = vec![];
+        for line in page_html.lines() {
+            if let Some(line) = line.strip_prefix("<p>Your puzzle answer was <code>") {
+                let (line, _) = line.split_once("</code>.</p>").unwrap();
+                correct_answers.push(line.to_string());
             }
         }
+        if correct_answers[*copies - 1] == x.to_string() {
+            println!(
+                "value: {} (correct!) took {}",
+                x.green().bold(),
+                elapsed.yellow()
+            );
+        } else {
+            println!(
+                "value: {} (incorrect answer) took {}",
+                x.red().bold(),
+                elapsed.yellow()
+            );
+        }
+    } else if env::var("AOC_COPY_CLIPBOARD").is_ok() {
+        force_copy(&x);
+        println!("value: {} (copied to clipboard)", x.green().bold());
+    } else {
+        println!(
+            "value: {} (set AOC_COPY_CLIPBOARD=1 to enable copy) took {}",
+            x.green().bold(),
+            elapsed.yellow()
+        );
     }
 
     *START_TS.lock().unwrap() = Some(Instant::now());
@@ -1498,7 +1494,7 @@ pub fn use_cycles<T, K: Eq + Hash>(
 
 pub trait Serde: Serialize {
     fn serde<T: DeserializeOwned>(&self) -> T {
-        serde_json::from_value(serde_json::to_value(&self).unwrap()).unwrap()
+        serde_json::from_value(serde_json::to_value(self).unwrap()).unwrap()
     }
 }
 
@@ -1524,7 +1520,7 @@ pub trait DebugExt: Debug + Sized {
             .split_once("/src/bin/")
             .unwrap()
             .1
-            .strip_suffix("\"")
+            .strip_suffix('"')
             .unwrap();
         let line = line.ints()[0];
         eprintln!("[src/bin/{}:{}] {:#?}", file, line, self);
