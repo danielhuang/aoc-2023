@@ -1247,11 +1247,11 @@ pub trait DisplayExt: Display {
 
     fn alphanumeric_words(&self) -> Vec<String> {
         self.to_string()
-            .replace(|x: char| !x.is_alphanumeric(), "")
+            .replace(|x: char| !x.is_alphanumeric(), " ")
             .words()
     }
 
-    fn regex(&self, regex: &str) -> Vec<Vec<String>> {
+    fn regex_multi(&self, regex: &str) -> Vec<Vec<String>> {
         #[cached]
         fn compile_regex(regex: String) -> Regex {
             Regex::new(&regex).unwrap()

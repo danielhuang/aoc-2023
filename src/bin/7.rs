@@ -24,12 +24,15 @@ fn main() {
             let rank = if part2 {
                 let mut ranks = vec![];
                 for best in bests.clone() {
-                    let cards = cards.replace('J', &best.tos());
-                    ranks.push(calc_rank(&cards));
+                    let cards = cards
+                        .chars()
+                        .map(|x| if x == 'J' { best } else { x })
+                        .cstr();
+                    ranks.push(calc_rank(cards.into_bytes()));
                 }
                 max(ranks)
             } else {
-                calc_rank(cards)
+                calc_rank(cards.clone().into_bytes())
             };
 
             (
@@ -37,7 +40,7 @@ fn main() {
                 Reverse(
                     cards
                         .chars()
-                        .map(|x| bests.iter().position(|y| x.tos() == y.tos()))
+                        .map(|x| bests.iter().position(|&y| x == y))
                         .cv(),
                 ),
                 bid.int(),
@@ -52,10 +55,16 @@ fn main() {
     }
 }
 
-fn calc_rank(cards: &str) -> i64 {
-    let freqs = freqs(cards.chars());
-    let label_count = cards.chars().cset().len();
-    let (min_count, max_count) = freqs.values().copied().minmax().into_option().unwrap();
+fn calc_rank(mut cards: Vec<u8>) -> i64 {
+    cards.sort();
+    let mut label_count = 0;
+    let mut min_count = cards.len();
+    let mut max_count = 0;
+    for (count, _) in cards.into_iter().dedup_with_count() {
+        min_count = min_count.min(count);
+        max_count = max_count.max(count);
+        label_count += 1;
+    }
     match (label_count, min_count, max_count) {
         (1, _, _) => -1,
         (2, _, 4) => -2,
