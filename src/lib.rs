@@ -1576,6 +1576,15 @@ pub fn derivative<T: std::ops::Sub<Output = T> + Clone>(a: &[T]) -> Vec<T> {
     result
 }
 
+pub fn integral<T: std::ops::Add<Output = T> + Clone>(a: &[T]) -> Vec<T> {
+    let mut result = a.to_vec();
+    for i in 1..result.len() {
+        let n = result[i].clone() + result[i - 1].clone();
+        result[i] = n;
+    }
+    result
+}
+
 pub fn linear_regression(p1: Point<2>, p2: Point<2>, x: i64) -> Rational64 {
     let Point([x1, y1]) = p1;
     let Point([x2, y2]) = p2;
@@ -1587,3 +1596,7 @@ pub fn linear_regression(p1: Point<2>, p2: Point<2>, x: i64) -> Rational64 {
 // wait a minute...
 pub const INF: i64 = i64::MAX;
 // shhhhh its big enough
+
+pub fn parse_2d(s: &str) -> Vec<Vec<char>> {
+    s.lines().map(|x| x.chars().collect()).collect()
+}
