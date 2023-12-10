@@ -152,6 +152,22 @@ impl<const N: usize> Div<i64> for Vector<N> {
     }
 }
 
+impl<const N: usize> Mul<i64> for Cell<N> {
+    type Output = Self;
+
+    fn mul(self, rhs: i64) -> Self::Output {
+        Self(self.0.map(|x| x * rhs))
+    }
+}
+
+impl<const N: usize> Div<i64> for Cell<N> {
+    type Output = Self;
+
+    fn div(self, rhs: i64) -> Self::Output {
+        Self(self.0.map(|x| x / rhs))
+    }
+}
+
 impl<const N: usize> Add<Vector<N>> for Point<N> {
     type Output = Self;
 

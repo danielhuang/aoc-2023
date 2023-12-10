@@ -1286,7 +1286,7 @@ checksum = "c1b04fb49957986fdce4d6ee7a65027d55d4b6d2265e5848bbb507b58ccfdb6f"
 [[package]]
 name = "pathfinding"
 version = "4.3.2"
-source = "git+https://github.com/danielhuang/pathfinding?rev=dab11c768cb5cafa59966955d1b25a033c2545b1#dab11c768cb5cafa59966955d1b25a033c2545b1"
+source = "git+https://github.com/danielhuang/pathfinding?rev=82eb62500b70d81444084fe3903df877ae66c0e5#82eb62500b70d81444084fe3903df877ae66c0e5"
 dependencies = [
  "deprecate-until",
  "fixedbitset",

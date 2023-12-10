@@ -12,12 +12,12 @@ fn main() {
                 nums.reverse();
             }
             let mut consts = vec![];
-            while nums.cii().any(|x| x != 0) {
+            while nums.iter().any(|&x| x != 0) {
                 nums = derivative(&nums);
                 consts.push(nums.remove(0));
             }
             consts.push(0);
-            for c in consts.cii().rev() {
+            for c in consts.ii().rev() {
                 nums.insert(0, c);
                 nums = integral(&nums);
             }
