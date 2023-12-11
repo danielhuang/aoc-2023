@@ -611,6 +611,14 @@ impl<const N: usize> Matrix<N> {
     }
 }
 
+impl Matrix<2> {
+    pub fn det(&self) -> i64 {
+        let [a, b] = self.cols;
+        let [[x1, y1], [x2, y2]] = [a.0, b.0];
+        x1 * y2 - y1 * x2
+    }
+}
+
 impl<const N: usize> Default for Matrix<N> {
     fn default() -> Self {
         Self {

@@ -33,6 +33,7 @@ color-eyre = "0.6.2"
 better-panic = "0.3.0"
 tap = "1.0.1"
 terminal_size = "0.3.0"
+faer = "0.16.0"
 
 [profile.dev]
 opt-level = 2

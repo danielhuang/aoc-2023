@@ -1,7 +1,5 @@
 use aoc_2023::*;
 
-// [!] BAD CODE ALERT [!]
-
 fn main() {
     let input = load_input();
 
@@ -48,71 +46,35 @@ fn main() {
 
     cp(all.iter().map(|x| x.1).max().unwrap());
 
-    let mut big_grid = HashSet::new();
-    for &cell in grid.keys() {
-        let tile = grid[cell];
-        let bigtile = cell * 3;
-        if tile != '.' {
-            big_grid.insert(bigtile);
-        }
-        if connects[cell].contains(&cell.up(1)) {
-            big_grid.insert(bigtile.up(1));
-        }
-        if connects[cell].contains(&cell.down(1)) {
-            big_grid.insert(bigtile.down(1));
-        }
-        if connects[cell].contains(&cell.left(1)) {
-            big_grid.insert(bigtile.left(1));
-        }
-        if connects[cell].contains(&cell.right(1)) {
-            big_grid.insert(bigtile.right(1));
-        }
-    }
-    let big_bounds = bounds(big_grid.clone()).grow();
-    let corner = big_bounds.corner_cells()[0];
-    let outside = bfs_reach([corner], |x| {
-        x.adj()
-            .ii()
-            .filter(|y| !big_grid.contains(y) && big_bounds.contains(*y))
-    })
-    .map(|x| x.0)
-    .cset();
+    let all = all.ii().map(|x| x.0).cv();
 
-    let mut sets = DisjointSet::using(big_bounds.cells());
-    for big_cell in big_bounds.cells() {
-        if outside.contains(&big_cell) {
-            continue;
-        }
-        for bigadj in big_cell.adj() {
-            if !big_grid.contains(&bigadj) && !big_grid.contains(&big_cell) {
-                sets.join(big_cell, bigadj);
-            }
-        }
-    }
-    let mut big_inside = sets.sets().ii().max_by_key(|x| x.len()).unwrap().cset();
-
-    let mut junk = DisjointSet::using(big_grid.clone());
-    for big_cell in big_grid.clone() {
-        for adj in big_cell.adj().ii().filter(|x| big_grid.contains(x)) {
-            junk.join(big_cell, adj);
-        }
-    }
-    let not_junk = junk.sets().ii().max_by_key(|x| x.len()).unwrap().cset();
-
-    big_inside.extend(
-        bfs_reach(big_inside.clone(), |x| {
-            x.adj().ii().filter(|x| !not_junk.contains(x))
-        })
-        .map(|x| x.0),
-    );
-
-    let mut smalls = HashSet::new();
-    for &small in grid.keys() {
-        let bigtile = small * 3;
-        if big_inside.contains(&bigtile) {
-            smalls.insert(small);
+    let mut pipe = vec![];
+    pipe.push(all[0]);
+    pipe.push(all[1]);
+    let all = all.cset();
+    let mut seen = pipe.clone().cset();
+    loop {
+        let next = connects[pipe[pipe.len() - 1]]
+            .cii()
+            .find(|x| all.contains(x) && !seen.contains(x));
+        if let Some(next) = next {
+            pipe.push(next);
+            seen.insert(next);
+        } else {
+            break;
         }
     }
 
-    cp(smalls.len())
+    let area = pipe
+        .cii()
+        .circular_tuple_windows()
+        .map(|(a, b)| Matrix::new([a.vector(), b.vector()]))
+        .map(|x| x.det())
+        .sumi()
+        .abs()
+        / 2;
+
+    let b = pipe.len() as i64;
+
+    cp(area - (b / 2) + 1);
 }
