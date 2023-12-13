@@ -1,29 +1,24 @@
 use aoc_2023::*;
 
-// [!] BAD CODE ALERT [!]
-
 fn main() {
     let input = load_input();
 
     for part2 in [false, true] {
         let mut sum = 0;
+        let mut cache = FxHashMap::default();
         for line in input.lines() {
             let [mut unknown, known] = line.words().ca();
             let mut known = known.ints().cv();
 
             if part2 {
-                unknown = format!("{}?", unknown)
-                    .repeat(5)
-                    .chars()
-                    .cii()
-                    .rev()
-                    .skip(1)
-                    .rev()
-                    .cstr();
+                unknown = [&*unknown].repeat(5).join("?");
                 known = known.repeat(5);
             }
+            let unknown = unknown.chars().map(|x| x as u8).cv();
 
-            let cnt = count(unknown.chars().cv(), known);
+            cache.clear();
+            let cnt = count(&unknown, &known, 0, 0, 0, &mut cache);
+
             sum += cnt;
         }
 
@@ -31,76 +26,46 @@ fn main() {
     }
 }
 
-fn count(template: Vec<char>, counts: Vec<i64>) -> usize {
-    count_paths(
-        ("".tos(), template, counts),
-        |(prev, remaining, counts)| {
-            if remaining.is_empty() {
-                return vec![];
-            }
-            let mut prev = prev.clone().trim_start_matches('.').tos();
-            let mut counts = counts.clone();
-            while prev.starts_with('#') && prev.contains('.') {
-                prev = prev.trim_start_matches('.').tos();
-                if !prev.is_empty() && prev.starts_with('#') {
-                    let amount = prev.len() - prev.trim_start_matches('#').len();
-                    if counts.is_empty() {
-                        break;
-                    }
-                    if counts[0] != amount.int() {
-                        break;
-                    }
-                    counts.remove(0);
-                    prev = prev.trim_start_matches('#').tos();
-                }
-            }
-
-            let mut results = vec![];
-            let next = remaining[0];
-            let a = format!("{}#", prev);
-            let b = format!("{}.", prev);
-            if next == '?' {
-                if partial(&a, &counts) {
-                    results.push((a, remaining[1..].to_vec(), counts.clone()));
-                }
-                if partial(&b, &counts) {
-                    results.push((b, remaining[1..].to_vec(), counts.clone()));
-                }
-            } else if next == '#' {
-                results.push((a, remaining[1..].to_vec(), counts.clone()));
-            } else if next == '.' {
-                results.push((b, remaining[1..].to_vec(), counts.clone()));
-            }
-            results.cset().cv()
-        },
-        |(prev, remaining, counts)| remaining.is_empty() && total(prev, counts),
-    )
-}
-
-fn total(after: &str, known: &[i64]) -> bool {
-    let after = after.split('.').filter(|x| !x.is_empty()).cv();
-    if after.len() != known.len() {
-        return false;
+fn count(
+    template: &[u8],
+    counts: &[i64],
+    template_i: usize,
+    counts_i: usize,
+    block_size: i64,
+    cache: &mut FxHashMap<(usize, usize, i64), usize>,
+) -> usize {
+    if counts_i == counts.len() {
+        return template[template_i..]
+            .iter()
+            .all(|&x| x == b'.' || x == b'?') as usize;
     }
-    for i in 0..known.len() {
-        if after[i].len() != known[i].uint() {
-            return false;
-        }
+    if template_i == template.len() {
+        return (counts[counts_i..] == [block_size]) as usize;
     }
-    true
-}
-
-fn partial(after: &str, known: &[i64]) -> bool {
-    assert!(!after.contains('?'));
-    let mut known = known.to_vec();
-    while !known.is_empty() {
-        if total(after, &known) {
-            return true;
-        }
-        *known.last_mut().unwrap() -= 1;
-        while !known.is_empty() && known.last().copied().unwrap() == 0 {
-            known.pop().unwrap();
-        }
+    if let Some(&result) = cache.get(&(template_i, counts_i, block_size)) {
+        return result;
     }
-    total(after, &known)
+    let mut sum = 0;
+    if (template[template_i] == b'#' || template[template_i] == b'?')
+        && block_size < counts[counts_i]
+    {
+        sum += count(
+            template,
+            counts,
+            template_i + 1,
+            counts_i,
+            block_size + 1,
+            cache,
+        );
+    }
+    if (template[template_i] == b'.' || template[template_i] == b'?')
+        && block_size == counts[counts_i]
+    {
+        sum += count(template, counts, template_i + 1, counts_i + 1, 0, cache);
+    }
+    if (template[template_i] == b'.' || template[template_i] == b'?') && block_size == 0 {
+        sum += count(template, counts, template_i + 1, counts_i, 0, cache);
+    }
+    cache.insert((template_i, counts_i, block_size), sum);
+    sum
 }
