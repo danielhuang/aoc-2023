@@ -32,7 +32,7 @@ fn count(
     template_i: usize,
     counts_i: usize,
     block_size: i64,
-    cache: &mut FxHashMap<(usize, usize, i64), usize>,
+    cache: &mut FxHashMap<(usize, usize), usize>,
 ) -> usize {
     if counts_i == counts.len() {
         return template[template_i..]
@@ -42,8 +42,10 @@ fn count(
     if template_i == template.len() {
         return (counts[counts_i..] == [block_size]) as usize;
     }
-    if let Some(&result) = cache.get(&(template_i, counts_i, block_size)) {
-        return result;
+    if block_size == 0 {
+        if let Some(&result) = cache.get(&(template_i, counts_i)) {
+            return result;
+        }
     }
     let mut sum = 0;
     if (template[template_i] == b'#' || template[template_i] == b'?')
@@ -66,6 +68,8 @@ fn count(
     if (template[template_i] == b'.' || template[template_i] == b'?') && block_size == 0 {
         sum += count(template, counts, template_i + 1, counts_i, 0, cache);
     }
-    cache.insert((template_i, counts_i, block_size), sum);
+    if block_size == 0 {
+        cache.insert((template_i, counts_i), sum);
+    }
     sum
 }

@@ -1550,7 +1550,9 @@ pub fn unparse_grid(grid: &DefaultHashMap<Cell<2>, char>) -> String {
     let b = bounds(grid.find(|x| x != grid.default));
     let mut s = String::new();
     let mut i = 0;
-    for cell in b.cells() {
+    let mut cells = b.cells();
+    cells.sort_by_key(|x| (-x[1], x[0]));
+    for cell in cells {
         s.push(grid[cell]);
         i += 1;
         if i == b.length(0) {
