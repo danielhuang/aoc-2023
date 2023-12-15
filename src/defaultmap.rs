@@ -5,11 +5,13 @@ use std::hash::Hash;
 use std::iter::{FromIterator, IntoIterator};
 use std::ops::{Index, IndexMut};
 
+use rustc_hash::FxHashMap;
+
 /// A `HashMap` that returns a default when keys are accessed that are not present.
 #[derive(PartialEq, Eq, Clone, Debug)]
 #[cfg_attr(feature = "with-serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DefaultHashMap<K: Eq + Hash, V: Clone> {
-    map: HashMap<K, V>,
+    map: FxHashMap<K, V>,
     pub default: V,
 }
 
@@ -34,13 +36,35 @@ impl<K: Eq + Hash, V: Default + Clone> From<HashMap<K, V>> for DefaultHashMap<K,
     /// if this is not desired `DefaultHashMap::new_with_map()` should be used.
     fn from(map: HashMap<K, V>) -> DefaultHashMap<K, V> {
         DefaultHashMap {
-            map,
+            map: map.into_iter().collect(),
             default: V::default(),
         }
     }
 }
 
 impl<K: Eq + Hash, V: Clone> From<DefaultHashMap<K, V>> for HashMap<K, V> {
+    /// The into method can be used to convert a `DefaultHashMap` back into a
+    /// `HashMap`.
+    fn from(val: DefaultHashMap<K, V>) -> Self {
+        val.map.into_iter().collect()
+    }
+}
+
+impl<K: Eq + Hash, V: Default + Clone> From<FxHashMap<K, V>> for DefaultHashMap<K, V> {
+    /// If you already have a `HashMap` that you would like to convert to a
+    /// `DefaultHashMap` you can use the `into()` method on the `HashMap` or the
+    /// `from()` constructor of `DefaultHashMap`.
+    /// The default value for missing keys will be `V::default()`,
+    /// if this is not desired `DefaultHashMap::new_with_map()` should be used.
+    fn from(map: FxHashMap<K, V>) -> DefaultHashMap<K, V> {
+        DefaultHashMap {
+            map,
+            default: V::default(),
+        }
+    }
+}
+
+impl<K: Eq + Hash, V: Clone> From<DefaultHashMap<K, V>> for FxHashMap<K, V> {
     /// The into method can be used to convert a `DefaultHashMap` back into a
     /// `HashMap`.
     fn from(val: DefaultHashMap<K, V>) -> Self {
@@ -54,7 +78,7 @@ impl<K: Eq + Hash, V: Clone> DefaultHashMap<K, V> {
     /// `DefaultHashMap::default()` instead.
     pub fn new(default: V) -> DefaultHashMap<K, V> {
         DefaultHashMap {
-            map: HashMap::new(),
+            map: FxHashMap::default(),
             default,
         }
     }
@@ -62,7 +86,7 @@ impl<K: Eq + Hash, V: Clone> DefaultHashMap<K, V> {
     /// Creates a `DefaultHashMap` based on a default and an already existing `HashMap`.
     /// If `V::default()` is the supplied default, usage of the `from()` constructor or the
     /// `into()` method on the original `HashMap` is preferred.
-    pub fn new_with_map(default: V, map: HashMap<K, V>) -> DefaultHashMap<K, V> {
+    pub fn new_with_map(default: V, map: FxHashMap<K, V>) -> DefaultHashMap<K, V> {
         DefaultHashMap { map, default }
     }
 

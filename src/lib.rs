@@ -12,6 +12,7 @@ pub use ::tap::*;
 pub use btree_vec::BTreeVec;
 pub use cached::proc_macro::cached;
 pub use derive_more::{Add, AddAssign, Sub, SubAssign, Sum};
+pub use indexmap::{IndexMap, IndexSet};
 pub use itertools::Itertools;
 use multimap::MultiMap;
 pub use num::*;
@@ -1474,7 +1475,7 @@ pub fn use_cycles<T, K: Eq + Hash>(
     mut key_fn: impl FnMut(&T) -> K,
     count: usize,
 ) -> T {
-    let mut cache = HashMap::new();
+    let mut cache = FxHashMap::default();
     for i in 0..count {
         let key = key_fn(&state);
         if let Some(&v) = cache.get(&key) {
@@ -1551,7 +1552,7 @@ pub fn unparse_grid(grid: &DefaultHashMap<Cell<2>, char>) -> String {
     let mut s = String::new();
     let mut i = 0;
     let mut cells = b.cells();
-    cells.sort_by_key(|x| (-x[1], x[0]));
+    cells.sort_unstable_by_key(|x| (-x[1], x[0]));
     for cell in cells {
         s.push(grid[cell]);
         i += 1;

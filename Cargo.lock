@@ -39,6 +39,7 @@ dependencies = [
  "color-eyre",
  "derive_more",
  "faer",
+ "indexmap 2.1.0",
  "itertools",
  "lazy-regex",
  "mimalloc",
