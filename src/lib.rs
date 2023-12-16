@@ -11,6 +11,7 @@
 pub use ::tap::*;
 pub use btree_vec::BTreeVec;
 pub use cached::proc_macro::cached;
+pub use compact_str::*;
 pub use derive_more::{Add, AddAssign, Sub, SubAssign, Sum};
 pub use indexmap::{IndexMap, IndexSet};
 pub use itertools::Itertools;
