@@ -270,7 +270,11 @@ pub fn cp(x: impl Display) {
         }
     } else if env::var("AOC_COPY_CLIPBOARD").is_ok() {
         force_copy(&x);
-        println!("value: {} (copied to clipboard)", x.green().bold());
+        println!(
+            "value: {} (copied to clipboard) took {}",
+            x.green().bold(),
+            elapsed.yellow()
+        );
     } else {
         println!(
             "value: {} (set AOC_COPY_CLIPBOARD=1 to enable copy) took {}",

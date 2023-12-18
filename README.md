@@ -4,10 +4,11 @@ Sample inputs from each day are provided. To run with actual inputs, set the `AO
 
 ## Placement
 
-Total points: 871 on [leaderboard](https://adventofcode.com/2023/leaderboard)
+Total points: 970 on [leaderboard](https://adventofcode.com/2023/leaderboard)
 
 | Day | Part 1   | Rank | Score | Part 2   | Rank | Score |
 | --- | -------- | ---- | ----- | -------- | ---- | ----- |
+| 18  | 00:02:44 | 2    | 99    | 00:24:43 | 144  | 0     |
 | 17  | 00:04:32 | 4    | 97    | 00:05:03 | 1    | 100   |
 | 16  | 00:12:28 | 144  | 0     | 00:32:53 | 1159 | 0     |
 | 15  | 00:01:31 | 17   | 84    | 00:13:34 | 255  | 0     |

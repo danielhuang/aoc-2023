@@ -9,17 +9,20 @@ fn main() {
     let width = b.length(0);
     let height = b.length(1);
 
-    for range in [1..=3, 4..=10] {
+    for (min, max) in [(1, 3), (4, 10)] {
         let result = dijkstra(
             [(c2(0, 0), v2(0, 1)), (c2(0, 0), v2(1, 0))],
-            |prev| {
-                let (pos, vel) = *prev;
+            |&(pos, vel)| {
                 let mut results = vec![];
                 for vel in [vel.turn_left(), vel.turn_right()] {
-                    for amount in range.clone() {
-                        let new_pos = vel * amount + pos;
-                        let cost = pos.goto(new_pos).ii().skip(1).map(|x| grid[x]).sumi();
-                        results.push(((new_pos, vel), cost));
+                    let mut cost = 0;
+                    let mut new_pos = pos;
+                    for i in 1..=max {
+                        new_pos += vel;
+                        cost += grid[new_pos];
+                        if i >= min {
+                            results.push(((new_pos, vel), cost));
+                        }
                     }
                 }
                 results
