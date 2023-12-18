@@ -271,7 +271,7 @@ pub trait Cartesian2: Cartesian<2> {
         let mut output: Vec<Self> = vec![];
         let mut pos: [i64; 2] = self.inner();
         pos[1] -= radius;
-        for (vel_x , vel_y) in [(1, 1), (-1, 1), (-1, -1), (1, -1)] {
+        for (vel_x, vel_y) in [(1, 1), (-1, 1), (-1, -1), (1, -1)] {
             for _ in 0..radius {
                 output.push(Self::new(pos));
                 pos[0] += vel_x;
