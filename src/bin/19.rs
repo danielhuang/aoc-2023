@@ -40,33 +40,30 @@ fn accepts(rules: &HashMap<String, Vec<(String, String)>>, nums: [i64; 4]) -> bo
 fn count(
     rules: &HashMap<String, Vec<(String, String)>>,
     label: String,
-    intervals: [Intervals; 4],
+    mut intervals: [Intervals; 4],
 ) -> usize {
-    let mut sum = 0;
-    let mut intervals = intervals.clone();
     if label == "R" {
         return 0;
     }
     if label == "A" {
         return intervals.ii().map(|x| x.covered_size() as usize).product();
     }
+    let mut sum = 0;
     for (src, dest) in rules[&label].clone() {
         if src.contains('<') {
             let hi = src.ints()[0];
             let var = src.chars().next().unwrap();
-            let taken = intervals[letter(var)].take_range(0, hi);
-            let remaining = intervals[letter(var)].clone();
-            intervals[letter(var)] = taken;
+            let (accept, next) = intervals[letter(var)].clone().split_at(hi);
+            intervals[letter(var)] = accept;
             sum += count(rules, dest.tos(), intervals.clone());
-            intervals[letter(var)] = remaining;
+            intervals[letter(var)] = next;
         } else if src.contains('>') {
             let lo = src.ints()[0];
             let var = src.chars().next().unwrap();
-            let taken = intervals[letter(var)].take_range(lo + 1, 99999);
-            let remaining = intervals[letter(var)].clone();
-            intervals[letter(var)] = taken;
+            let (next, accept) = intervals[letter(var)].clone().split_at(lo + 1);
+            intervals[letter(var)] = accept;
             sum += count(rules, dest.tos(), intervals.clone());
-            intervals[letter(var)] = remaining;
+            intervals[letter(var)] = next;
         } else {
             sum += count(rules, dest.tos(), intervals.clone());
         }
