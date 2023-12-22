@@ -50,6 +50,7 @@ dependencies = [
  "pathfinding",
  "petgraph",
  "prime_factorization",
+ "range-ext",
  "rayon",
  "regex",
  "reqwest",
@@ -2044,6 +2045,12 @@ checksum = "cbf7e9e623549b0e21f6e97cf8ecf247c1a8fd2e8a992ae265314300b2455d5c"
 dependencies = [
  "rand_core 0.3.1",
 ]
+
+[[package]]
+name = "range-ext"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8ef928f61c6999ac5f35fe4cbba7ba0b70040d4089d63fc7416e50802d6c0872"
 
 [[package]]
 name = "raw-cpuid"

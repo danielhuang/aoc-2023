@@ -37,6 +37,7 @@ pub use pathfinding::undirected::connected_components::*;
 pub use pathfinding::undirected::kruskal::*;
 pub use pathfinding::utils::*;
 pub use prime_factorization::*;
+pub use range_ext::intersect::Intersect;
 use regex::Regex;
 use reqwest::blocking::Client;
 pub use rustc_hash::{FxHashMap, FxHashSet};
@@ -184,15 +185,16 @@ pub fn load_input() -> String {
                 }
             }
         };
-        let submitted_path = format!("target/{}.html", day());
-        let submitted = match metadata(&submitted_path) {
+        let html_path = format!("target/{}.html", day());
+        let submitted = match metadata(&html_path) {
             Ok(_) => true,
             Err(_) => {
                 let page = fetch(&format!("https://adventofcode.com/2023/day/{}", day())).unwrap();
+                write_atomic(&format!("target/{}-pre.html", day()), &page);
                 if page.contains(
                     "Both parts of this puzzle are complete! They provide two gold stars: **",
                 ) {
-                    write_atomic(&submitted_path, &page);
+                    write_atomic(&html_path, &page);
                     true
                 } else {
                     false
@@ -229,6 +231,8 @@ pub fn load_input() -> String {
 }
 
 pub fn cp(x: impl Display) {
+    let x = x.to_string();
+
     let elapsed = START_TS.lock().unwrap().unwrap().elapsed();
     let elapsed = format!("{:?}", elapsed);
 
@@ -241,11 +245,34 @@ pub fn cp(x: impl Display) {
     *copies += 1;
 
     if DEBUG {
-        println!(
-            "value: {} (debug mode, not copying) took {}",
-            x.blue().bold(),
-            elapsed.yellow()
-        );
+        let page = fs::read_to_string(format!("target/{}-pre.html", day()));
+        match page {
+            Ok(page) => match page.find(&x) {
+                Some(i) => {
+                    let j = i + x.len();
+                    let begin = i.saturating_sub(30);
+                    let end = (j + 30).min(page.len());
+                    println!("value {} in page:", "found".green());
+                    println!(
+                        "... {}{}{} ...",
+                        &page[begin..i].replace('\n', ""),
+                        x.green().bold(),
+                        &page[j..end].replace('\n', "")
+                    );
+                }
+                None => {
+                    println!("value {} in page: {}", "not found".red(), x.yellow().bold());
+                }
+            },
+            Err(e) => {
+                println!("error: {e:?}");
+                println!(
+                    "value: {} (unknown result) took {}",
+                    x.blue().bold(),
+                    elapsed.yellow()
+                );
+            }
+        }
     } else if *SUBMITTED.lock().unwrap() {
         let page_html = read_to_string(format!("target/{}.html", day())).unwrap();
         let mut correct_answers = vec![];
@@ -255,7 +282,7 @@ pub fn cp(x: impl Display) {
                 correct_answers.push(line.to_string());
             }
         }
-        if correct_answers[*copies - 1] == x.to_string() {
+        if correct_answers[*copies - 1] == x {
             println!(
                 "value: {} (correct!) took {}",
                 x.green().bold(),
@@ -939,12 +966,89 @@ impl<const N: usize> Cuboid<N> {
         [Point(self.min), Point(self.max)]
     }
 
+    pub fn corner_vector(&self) -> Vector<N> {
+        let [a, b] = self.corner_points();
+        b - a
+    }
+
+    pub fn all_corner_points(&self) -> Vec<Point<N>> {
+        let corner = self.corner_points()[0];
+        let vector = self.corner_vector();
+        let mut v = vec![Default::default(); count_corners(N)];
+        for (i, x) in v.iter_mut().enumerate() {
+            let mut point = corner;
+            for n in 0..N {
+                if i & (1 << n) != 0 {
+                    point.0[n] += vector[n];
+                }
+            }
+            *x = point;
+        }
+        v
+    }
+
+    pub fn all_corner_cells(&self) -> Vec<Cell<N>> {
+        let [corner1, corner2] = self.corner_cells();
+        let vector = corner2 - corner1;
+        let mut v = vec![Default::default(); count_corners(N)];
+        for (i, x) in v.iter_mut().enumerate() {
+            let mut cell = corner1;
+            for n in 0..N {
+                if i & (1 << n) != 0 {
+                    cell.0[n] += vector[n];
+                }
+            }
+            *x = cell;
+        }
+        v
+    }
+
     pub fn wrap<T: Cartesian<N>>(&self, value: T) -> T {
         T::new(array::from_fn(|dim| {
             let relative = value[dim] - self.min[dim];
             let wrapped_relative = relative.rem_euclid(self.length(dim));
             wrapped_relative + self.min[dim]
         }))
+    }
+
+    /// counts tangents (if faces/edges touch, return true)
+    pub fn intersect_points(&self, other: Self) -> bool {
+        (0..N).all(|dim| {
+            let a = self.min[dim]..=self.max[dim];
+            let b = other.min[dim]..=other.max[dim];
+            a.does_intersect(&b)
+        })
+    }
+
+    /// only returns true if there is a mutual cell within both
+    pub fn intersect_cells(&self, other: Self) -> bool {
+        (0..N).all(|dim| {
+            let a = self.min[dim]..self.max[dim];
+            let b = other.min[dim]..other.max[dim];
+            a.does_intersect(&b)
+        })
+    }
+}
+
+impl<const N: usize> std::ops::Add<Vector<N>> for Cuboid<N> {
+    type Output = Self;
+
+    fn add(self, rhs: Vector<N>) -> Self::Output {
+        Self {
+            min: (Vector::new(self.min) + rhs).inner(),
+            max: (Vector::new(self.max) + rhs).inner(),
+        }
+    }
+}
+
+impl<const N: usize> std::ops::Sub<Vector<N>> for Cuboid<N> {
+    type Output = Self;
+
+    fn sub(self, rhs: Vector<N>) -> Self::Output {
+        Self {
+            min: (Vector::new(self.min) - rhs).inner(),
+            max: (Vector::new(self.max) - rhs).inner(),
+        }
     }
 }
 
