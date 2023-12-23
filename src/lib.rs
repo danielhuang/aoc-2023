@@ -247,23 +247,45 @@ pub fn cp(x: impl Display) {
     if DEBUG {
         let page = fs::read_to_string(format!("target/{}-pre.html", day()));
         match page {
-            Ok(page) => match page.find(&x) {
-                Some(i) => {
-                    let j = i + x.len();
-                    let begin = i.saturating_sub(30);
-                    let end = (j + 30).min(page.len());
-                    println!("value {} in page:", "found".green());
-                    println!(
-                        "... {}{}{} ...",
-                        &page[begin..i].replace('\n', ""),
-                        x.green().bold(),
-                        &page[j..end].replace('\n', "")
-                    );
+            Ok(page) => {
+                let page = page.split("<body>").last().unwrap();
+                match [&format!(">{}<", x), &x].into_iter().find_map(|x| {
+                    let x = page.match_indices(x).cv();
+                    if !x.is_empty() {
+                        Some(x)
+                    } else {
+                        None
+                    }
+                }) {
+                    Some(m) => {
+                        println!(
+                            "value: {} ({}) took {}",
+                            x.bold().green(),
+                            "found".green(),
+                            elapsed.yellow()
+                        );
+                        for (i, x) in m {
+                            let j = i + x.len();
+                            let begin = i.saturating_sub(30);
+                            let end = (j + 30).min(page.len());
+                            println!(
+                                "... {}{}{} ...",
+                                &page[begin..i].replace('\n', ""),
+                                x.green().bold(),
+                                &page[j..end].replace('\n', "")
+                            );
+                        }
+                    }
+                    None => {
+                        println!(
+                            "value: {} ({}) took {}",
+                            x.yellow().bold(),
+                            "not found".red(),
+                            elapsed.yellow()
+                        );
+                    }
                 }
-                None => {
-                    println!("value {} in page: {}", "not found".red(), x.yellow().bold());
-                }
-            },
+            }
             Err(e) => {
                 println!("error: {e:?}");
                 println!(
@@ -1028,6 +1050,19 @@ impl<const N: usize> Cuboid<N> {
             a.does_intersect(&b)
         })
     }
+
+    pub fn extend(&mut self, x: impl Boundable<N>) {
+        for p in x.points() {
+            for (dim, val) in p.0.into_iter().enumerate() {
+                if val < self.min[dim] {
+                    self.min[dim] = val;
+                }
+                if val > self.max[dim] {
+                    self.max[dim] = val;
+                }
+            }
+        }
+    }
 }
 
 impl<const N: usize> std::ops::Add<Vector<N>> for Cuboid<N> {
@@ -1049,6 +1084,12 @@ impl<const N: usize> std::ops::Sub<Vector<N>> for Cuboid<N> {
             min: (Vector::new(self.min) - rhs).inner(),
             max: (Vector::new(self.max) - rhs).inner(),
         }
+    }
+}
+
+impl<const N: usize> Boundable<N> for Cuboid<N> {
+    fn points(&self) -> impl Iterator<Item = Point<N>> {
+        self.all_corner_points().into_iter()
     }
 }
 

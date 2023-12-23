@@ -34,6 +34,7 @@ fn main() {
         init_iters += 1;
         amount_left -= 1;
     }
+
     let all = bfs_reach(all, |x| adj(*x, &grid, &b, true))
         .take_while(|x| x.1 <= init_iters)
         .filter(|x| x.1 % 2 == 0)
@@ -49,7 +50,7 @@ fn main() {
         .enumerate()
     {
         if cost > c {
-            lens.push(len);
+            lens.push(len as i64);
             c = cost;
 
             let lens_stepped = lens.cii().step_by(size).cv();
