@@ -44,6 +44,6 @@ fn main() {
     }
 }
 
-fn from_hex(x: &str) -> i64 {
-    i64::from_str_radix(x, 16).unwrap()
+fn from_hex(x: &str) -> Z {
+    Z::from_str_radix(x, 16).unwrap()
 }

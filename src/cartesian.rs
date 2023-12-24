@@ -10,14 +10,16 @@ use std::{
     ops::{Add, AddAssign, Div, Mul, Sub, SubAssign},
 };
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Deref, DerefMut)]
-pub struct Point<const N: usize>(pub [i64; N]);
+use crate::Z;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Deref, DerefMut)]
-pub struct Vector<const N: usize>(pub [i64; N]);
+pub struct Point<const N: usize>(pub [Z; N]);
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Deref, DerefMut)]
-pub struct Cell<const N: usize>(pub [i64; N]);
+pub struct Vector<const N: usize>(pub [Z; N]);
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Deref, DerefMut)]
+pub struct Cell<const N: usize>(pub [Z; N]);
 
 pub type Point2 = Point<2>;
 pub type Vector2 = Vector<2>;
@@ -36,47 +38,47 @@ pub const fn count_corners(dim: usize) -> usize {
 }
 
 #[must_use]
-pub fn p2(x: i64, y: i64) -> Point<2> {
+pub fn p2(x: Z, y: Z) -> Point<2> {
     Point::new([x, y])
 }
 
 #[must_use]
-pub fn p3(x: i64, y: i64, z: i64) -> Point<3> {
+pub fn p3(x: Z, y: Z, z: Z) -> Point<3> {
     Point::new([x, y, z])
 }
 
 #[must_use]
-pub fn p4(w: i64, x: i64, y: i64, z: i64) -> Point<4> {
+pub fn p4(w: Z, x: Z, y: Z, z: Z) -> Point<4> {
     Point::new([w, x, y, z])
 }
 
 #[must_use]
-pub fn v2(x: i64, y: i64) -> Vector<2> {
+pub fn v2(x: Z, y: Z) -> Vector<2> {
     Vector::new([x, y])
 }
 
 #[must_use]
-pub fn v3(x: i64, y: i64, z: i64) -> Vector<3> {
+pub fn v3(x: Z, y: Z, z: Z) -> Vector<3> {
     Vector::new([x, y, z])
 }
 
 #[must_use]
-pub fn v4(w: i64, x: i64, y: i64, z: i64) -> Vector<4> {
+pub fn v4(w: Z, x: Z, y: Z, z: Z) -> Vector<4> {
     Vector::new([w, x, y, z])
 }
 
 #[must_use]
-pub fn c2(x: i64, y: i64) -> Cell<2> {
+pub fn c2(x: Z, y: Z) -> Cell<2> {
     Cell::new([x, y])
 }
 
 #[must_use]
-pub fn c3(x: i64, y: i64, z: i64) -> Cell<3> {
+pub fn c3(x: Z, y: Z, z: Z) -> Cell<3> {
     Cell::new([x, y, z])
 }
 
 #[must_use]
-pub fn c4(w: i64, x: i64, y: i64, z: i64) -> Cell<4> {
+pub fn c4(w: Z, x: Z, y: Z, z: Z) -> Cell<4> {
     Cell::new([w, x, y, z])
 }
 
@@ -85,7 +87,7 @@ impl<const N: usize> Point<N> {
         Self(from_fn(|_| 0))
     }
 
-    pub fn new(x: [i64; N]) -> Self {
+    pub fn new(x: [Z; N]) -> Self {
         Self(x)
     }
 
@@ -136,34 +138,34 @@ impl<const N: usize> Add<Point<N>> for Vector<N> {
     }
 }
 
-impl<const N: usize> Mul<i64> for Vector<N> {
+impl<const N: usize> Mul<Z> for Vector<N> {
     type Output = Self;
 
-    fn mul(self, rhs: i64) -> Self::Output {
+    fn mul(self, rhs: Z) -> Self::Output {
         Self(self.0.map(|x| x * rhs))
     }
 }
 
-impl<const N: usize> Div<i64> for Vector<N> {
+impl<const N: usize> Div<Z> for Vector<N> {
     type Output = Self;
 
-    fn div(self, rhs: i64) -> Self::Output {
+    fn div(self, rhs: Z) -> Self::Output {
         Self(self.0.map(|x| x / rhs))
     }
 }
 
-impl<const N: usize> Mul<i64> for Cell<N> {
+impl<const N: usize> Mul<Z> for Cell<N> {
     type Output = Self;
 
-    fn mul(self, rhs: i64) -> Self::Output {
+    fn mul(self, rhs: Z) -> Self::Output {
         Self(self.0.map(|x| x * rhs))
     }
 }
 
-impl<const N: usize> Div<i64> for Cell<N> {
+impl<const N: usize> Div<Z> for Cell<N> {
     type Output = Self;
 
-    fn div(self, rhs: i64) -> Self::Output {
+    fn div(self, rhs: Z) -> Self::Output {
         Self(self.0.map(|x| x / rhs))
     }
 }
@@ -227,17 +229,17 @@ impl<const N: usize> Neg for Vector<N> {
 }
 
 pub trait Cartesian<const N: usize>:
-    Sized + Default + Clone + Copy + Deref<Target = [i64; N]> + Eq
+    Sized + Default + Clone + Copy + Deref<Target = [Z; N]> + Eq
 {
-    fn inner(&self) -> [i64; N];
+    fn inner(&self) -> [Z; N];
 
-    fn new(x: [i64; N]) -> Self;
+    fn new(x: [Z; N]) -> Self;
 
-    fn manhat(&self) -> i64 {
+    fn manhat(&self) -> Z {
         self.inner().into_iter().map(|x| x.abs()).sum()
     }
 
-    fn manhat_diag(&self) -> i64 {
+    fn manhat_diag(&self) -> Z {
         self.inner().into_iter().map(|x| x.abs()).max().unwrap()
     }
 
@@ -255,31 +257,31 @@ pub trait Cartesian<const N: usize>:
 }
 
 pub trait Cartesian2: Cartesian<2> {
-    fn up(&self, n: i64) -> Self {
+    fn up(&self, n: Z) -> Self {
         let mut x = self.inner();
         x[1] += n;
         Self::new(x)
     }
 
-    fn down(&self, n: i64) -> Self {
+    fn down(&self, n: Z) -> Self {
         let mut x = self.inner();
         x[1] -= n;
         Self::new(x)
     }
 
-    fn left(&self, n: i64) -> Self {
+    fn left(&self, n: Z) -> Self {
         let mut x = self.inner();
         x[0] -= n;
         Self::new(x)
     }
 
-    fn right(&self, n: i64) -> Self {
+    fn right(&self, n: Z) -> Self {
         let mut x = self.inner();
         x[0] += n;
         Self::new(x)
     }
 
-    fn diamond(&self, radius: i64) -> Vec<Self> {
+    fn diamond(&self, radius: Z) -> Vec<Self> {
         assert!(radius >= 0);
         if radius == 0 {
             return vec![*self];
@@ -297,11 +299,11 @@ pub trait Cartesian2: Cartesian<2> {
         output
     }
 
-    fn filled_diamond(&self, radius: i64) -> Vec<Self> {
+    fn filled_diamond(&self, radius: Z) -> Vec<Self> {
         (0..=radius).flat_map(|r| self.diamond(r)).collect()
     }
 
-    fn square_border(&self, radius: i64) -> Vec<Self> {
+    fn square_border(&self, radius: Z) -> Vec<Self> {
         assert!(radius >= 0);
         if radius == 0 {
             return vec![*self];
@@ -327,7 +329,7 @@ pub trait Cartesian2: Cartesian<2> {
         output
     }
 
-    fn filled_square(&self, radius: i64) -> Vec<Self> {
+    fn filled_square(&self, radius: Z) -> Vec<Self> {
         (0..=radius).flat_map(|r| self.square_border(r)).collect()
     }
 
@@ -367,21 +369,21 @@ pub trait Cartesian2: Cartesian<2> {
 impl<T: Cartesian<2>> Cartesian2 for T {}
 
 impl<const N: usize> Cartesian<N> for Point<N> {
-    fn inner(&self) -> [i64; N] {
+    fn inner(&self) -> [Z; N] {
         self.0
     }
 
-    fn new(x: [i64; N]) -> Self {
+    fn new(x: [Z; N]) -> Self {
         Self(x)
     }
 }
 
 impl<const N: usize> Cartesian<N> for Vector<N> {
-    fn inner(&self) -> [i64; N] {
+    fn inner(&self) -> [Z; N] {
         self.0
     }
 
-    fn new(x: [i64; N]) -> Self {
+    fn new(x: [Z; N]) -> Self {
         Self(x)
     }
 }
@@ -403,7 +405,7 @@ impl<const N: usize> Cell<N> {
         Self(from_fn(|_| 0))
     }
 
-    pub fn new(x: [i64; N]) -> Self {
+    pub fn new(x: [Z; N]) -> Self {
         Self(x)
     }
 
@@ -445,7 +447,7 @@ impl<const N: usize> Vector<N> {
         Self(from_fn(|_| 0))
     }
 
-    pub fn new(x: [i64; N]) -> Self {
+    pub fn new(x: [Z; N]) -> Self {
         Self(x)
     }
 
@@ -509,7 +511,7 @@ impl<const N: usize> Vector<N> {
 }
 
 impl Vector<2> {
-    pub fn cross(&self, other: Self) -> i64 {
+    pub fn cross(&self, other: Self) -> Z {
         let Vector([a, b]) = self;
         let Vector([x, y]) = other;
         a * y - b * x
@@ -569,11 +571,11 @@ impl<const N: usize> SubAssign<Vector<N>> for Cell<N> {
 }
 
 impl<const N: usize> Cartesian<N> for Cell<N> {
-    fn inner(&self) -> [i64; N] {
+    fn inner(&self) -> [Z; N] {
         self.0
     }
 
-    fn new(x: [i64; N]) -> Self {
+    fn new(x: [Z; N]) -> Self {
         Self(x)
     }
 }
@@ -612,7 +614,7 @@ impl<const N: usize> Matrix<N> {
 }
 
 impl Matrix<2> {
-    pub fn det(&self) -> i64 {
+    pub fn det(&self) -> Z {
         let [a, b] = self.cols;
         let [[x1, y1], [x2, y2]] = [a.0, b.0];
         x1 * y2 - y1 * x2
@@ -647,10 +649,10 @@ impl<const N: usize> Sub for Matrix<N> {
     }
 }
 
-impl<const N: usize> Mul<i64> for Matrix<N> {
+impl<const N: usize> Mul<Z> for Matrix<N> {
     type Output = Self;
 
-    fn mul(self, rhs: i64) -> Self::Output {
+    fn mul(self, rhs: Z) -> Self::Output {
         Self {
             cols: from_fn(|i| self.cols[i] * rhs),
         }

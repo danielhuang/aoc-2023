@@ -7,7 +7,7 @@ fn longest(
     end: Cell2,
     paths: &FxHashMap<Cell2, Vec<(Cell2, usize)>>,
     part2: bool,
-) -> i64 {
+) -> Z {
     if start == end {
         return 0;
     }
@@ -34,7 +34,7 @@ fn longest(
         if !seen.insert(next) {
             continue;
         }
-        let x = longest(grid, seen, next, end, paths, part2) + dist as i64;
+        let x = longest(grid, seen, next, end, paths, part2) + dist as Z;
         if x > longest_dist {
             longest_dist = x;
         }

@@ -29,8 +29,8 @@ fn main() {
                 .filter(|x| rows.contains(x))
                 .count();
             sum += (b - a).manhat();
-            sum += extra_x as i64 * (expansion - 1);
-            sum += extra_y as i64 * (expansion - 1);
+            sum += extra_x as Z * (expansion - 1);
+            sum += extra_y as Z * (expansion - 1);
         }
 
         cp(sum);

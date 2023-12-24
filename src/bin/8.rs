@@ -20,7 +20,7 @@ fn main() {
 
         let mut counts = vec![];
         for mut cur in starts.clone() {
-            let mut count: i64 = 0;
+            let mut count: Z = 0;
             for direction in head.chars().cycle() {
                 if direction == 'L' {
                     cur = map[&cur].0.tos();

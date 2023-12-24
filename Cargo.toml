@@ -37,6 +37,7 @@ faer = "0.16.0"
 indexmap = "2.1.0"
 compact_str = "0.7.1"
 range-ext = "0.3.0"
+z3 = "0.12.1"
 
 [profile.dev]
 opt-level = 2

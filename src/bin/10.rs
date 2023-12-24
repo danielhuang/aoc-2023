@@ -74,7 +74,7 @@ fn main() {
         .abs()
         / 2;
 
-    let b = pipe.len() as i64;
+    let b = pipe.len() as Z;
 
     cp(area - (b / 2) + 1);
 }

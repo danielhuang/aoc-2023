@@ -48,14 +48,14 @@ fn main() {
         });
 
         for (i, (_, bid)) in v.ii().enumerate() {
-            sum += (i as i64 + 1) * bid;
+            sum += (i as Z + 1) * bid;
         }
 
         cp(sum);
     }
 }
 
-fn calc_rank(mut cards: Vec<u8>) -> i64 {
+fn calc_rank(mut cards: Vec<u8>) -> Z {
     cards.sort();
     let mut label_count = 0;
     let mut min_count = cards.len();

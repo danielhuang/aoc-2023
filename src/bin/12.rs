@@ -28,10 +28,10 @@ fn main() {
 
 fn count(
     template: &[u8],
-    counts: &[i64],
+    counts: &[Z],
     template_i: usize,
     counts_i: usize,
-    block_size: i64,
+    block_size: Z,
     cache: &mut FxHashMap<(usize, usize), usize>,
 ) -> usize {
     if counts_i == counts.len() {

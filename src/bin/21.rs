@@ -50,7 +50,7 @@ fn main() {
         .enumerate()
     {
         if cost > c {
-            lens.push(len as i64);
+            lens.push(len as Z);
             c = cost;
 
             let lens_stepped = lens.cii().step_by(size).cv();

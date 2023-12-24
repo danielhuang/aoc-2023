@@ -1,6 +1,6 @@
 use aoc_2023::*;
 
-fn weight(grid: &DefaultHashMap<Cell<2>, char>) -> i64 {
+fn weight(grid: &DefaultHashMap<Cell<2>, char>) -> Z {
     let b = bounds(grid.keys().copied());
     let height = b.length(1);
 

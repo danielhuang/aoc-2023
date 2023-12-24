@@ -4,7 +4,7 @@ fn letter(s: char) -> usize {
     ['x', 'm', 'a', 's'].ii().position(|x| x == s).unwrap()
 }
 
-fn accepts(rules: &HashMap<String, Vec<(String, String)>>, nums: [i64; 4]) -> bool {
+fn accepts(rules: &HashMap<String, Vec<(String, String)>>, nums: [Z; 4]) -> bool {
     let mut cur = "in".tos();
     while rules.contains_key(&cur) {
         let cond = rules[&cur].clone();

@@ -16,6 +16,7 @@ pub use derive_more::{Add, AddAssign, Sub, SubAssign, Sum};
 pub use indexmap::{IndexMap, IndexSet};
 pub use itertools::Itertools;
 use multimap::MultiMap;
+use num::rational::Ratio;
 pub use num::*;
 use owo_colors::OwoColorize;
 pub use pathfinding::directed::astar::*;
@@ -69,6 +70,9 @@ use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 use std::time::{Duration, Instant};
 pub use std::{env, io};
+
+pub type Z = i128;
+pub type Q = Ratio<Z>;
 
 pub mod cartesian;
 pub mod defaultmap;
@@ -532,14 +536,14 @@ impl<T: Signed> SignedExt for T {}
 #[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum Snailfish {
-    Num(i64),
+    Num(Z),
     Array(Vec<Snailfish>),
 }
 
 impl Snailfish {
     pub fn from_value(v: &Value) -> Self {
         match v {
-            Value::Number(x) => Self::Num(x.as_i64().unwrap()),
+            Value::Number(x) => Self::Num(x.as_i64().unwrap() as Z),
             Value::Array(x) => Self::Array(x.iter().map(Self::from_value).collect_vec()),
             _ => unreachable!("invalid"),
         }
@@ -579,11 +583,11 @@ pub enum IntervalEdge {
 
 #[derive(Default, Debug, Clone)]
 pub struct Intervals {
-    bounds: BTreeMap<i64, IntervalEdge>,
+    bounds: BTreeMap<Z, IntervalEdge>,
 }
 
 impl Intervals {
-    fn remove_between(&mut self, range: impl RangeBounds<i64>) {
+    fn remove_between(&mut self, range: impl RangeBounds<Z>) {
         let (start, end) = (range.start_bound(), range.end_bound());
         match (start, end) {
             (Bound::Excluded(s), Bound::Excluded(e)) if s == e => {
@@ -601,7 +605,7 @@ impl Intervals {
         }
     }
 
-    pub fn add(&mut self, start_inclusive: i64, end_exclusive: i64) {
+    pub fn add(&mut self, start_inclusive: Z, end_exclusive: Z) {
         if end_exclusive <= start_inclusive {
             return;
         }
@@ -629,11 +633,11 @@ impl Intervals {
         assert!(self.contains(end_exclusive - 1));
     }
 
-    pub fn add_one(&mut self, x: i64) {
+    pub fn add_one(&mut self, x: Z) {
         self.add(x, x + 1);
     }
 
-    pub fn remove(&mut self, start_inclusive: i64, end_exclusive: i64) {
+    pub fn remove(&mut self, start_inclusive: Z, end_exclusive: Z) {
         if end_exclusive <= start_inclusive {
             return;
         }
@@ -660,11 +664,11 @@ impl Intervals {
         assert!(!self.contains(end_exclusive - 1));
     }
 
-    pub fn remove_one(&mut self, x: i64) {
+    pub fn remove_one(&mut self, x: Z) {
         self.remove(x, x + 1);
     }
 
-    pub fn contains(&self, x: i64) -> bool {
+    pub fn contains(&self, x: Z) -> bool {
         if let Some(edge) = self.bounds.range(..=x).next_back() {
             edge.1 == &IntervalEdge::Start
         } else {
@@ -672,7 +676,7 @@ impl Intervals {
         }
     }
 
-    pub fn contains_all(&self, start_inclusive: i64, end_exclusive: i64) -> bool {
+    pub fn contains_all(&self, start_inclusive: Z, end_exclusive: Z) -> bool {
         if start_inclusive <= end_exclusive {
             return true;
         }
@@ -686,7 +690,7 @@ impl Intervals {
                 .is_none()
     }
 
-    pub fn covered_size(&self) -> i64 {
+    pub fn covered_size(&self) -> Z {
         let mut total = 0;
         for (left, right) in self.bounds.iter().tuple_windows() {
             match left.1 {
@@ -707,7 +711,7 @@ impl Intervals {
         }
     }
 
-    pub fn split_off(&mut self, lowest_right_value: i64) -> Self {
+    pub fn split_off(&mut self, lowest_right_value: Z) -> Self {
         let patch_left = self.contains(lowest_right_value - 1);
         let patch_right = self.contains(lowest_right_value);
         let mut right = self.bounds.split_off(&lowest_right_value);
@@ -725,12 +729,12 @@ impl Intervals {
         Self { bounds: right }
     }
 
-    pub fn split_at(mut self, lowest_right_value: i64) -> (Self, Self) {
+    pub fn split_at(mut self, lowest_right_value: Z) -> (Self, Self) {
         let right = self.split_off(lowest_right_value);
         (self, right)
     }
 
-    pub fn all_intervals(&self) -> impl Iterator<Item = Range<i64>> + '_ {
+    pub fn all_intervals(&self) -> impl Iterator<Item = Range<Z>> + '_ {
         let mut iter = self.bounds.iter();
         std::iter::from_fn(move || {
             let (&lo, lo_edge) = iter.next()?;
@@ -752,7 +756,7 @@ impl Intervals {
         a
     }
 
-    pub fn take_range(&mut self, start_inclusive: i64, end_exclusive: i64) -> Self {
+    pub fn take_range(&mut self, start_inclusive: Z, end_exclusive: Z) -> Self {
         let mid_right = self.split_off(start_inclusive);
         let (mid, right) = mid_right.split_at(end_exclusive);
         for interval in right.all_intervals() {
@@ -767,7 +771,7 @@ impl Intervals {
         }
     }
 
-    pub fn shift(&mut self, offset: i64) {
+    pub fn shift(&mut self, offset: Z) {
         self.bounds = std::mem::take(&mut self.bounds)
             .into_iter()
             .map(|(k, v)| (k + offset, v))
@@ -777,13 +781,13 @@ impl Intervals {
 
 #[derive(Clone)]
 pub struct IntervalsIter<'a> {
-    last_seen_upward: Option<i64>,
-    last_seen_downward: Option<i64>,
+    last_seen_upward: Option<Z>,
+    last_seen_downward: Option<Z>,
     intervals: &'a Intervals,
 }
 
 impl<'a> Iterator for IntervalsIter<'a> {
-    type Item = i64;
+    type Item = Z;
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(last_seen_upward) = self.last_seen_upward {
@@ -894,36 +898,36 @@ pub fn sometimes() -> bool {
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub struct Cuboid<const N: usize> {
     // points, inclusive
-    pub min: [i64; N],
-    pub max: [i64; N],
+    pub min: [Z; N],
+    pub max: [Z; N],
 }
 
 impl<const N: usize> Cuboid<N> {
-    pub fn length(&self, dim: usize) -> i64 {
+    pub fn length(&self, dim: usize) -> Z {
         self.max[dim] - self.min[dim]
     }
 
-    pub fn lengths(&self) -> [i64; N] {
+    pub fn lengths(&self) -> [Z; N] {
         array::from_fn(|dim| self.length(dim))
     }
 
-    pub fn size(&self) -> i64 {
+    pub fn size(&self) -> Z {
         self.lengths().into_iter().product()
     }
 
-    pub fn volume(&self) -> i64 {
+    pub fn volume(&self) -> Z {
         self.size()
     }
 
-    pub fn surface_area(&self) -> i64 {
+    pub fn surface_area(&self) -> Z {
         2 * (0..N)
             .map(|k| {
                 (0..N)
                     .filter(|&j| k != j)
                     .map(|j| self.length(j))
-                    .product::<i64>()
+                    .product::<Z>()
             })
-            .sum::<i64>()
+            .sum::<Z>()
     }
 
     fn assert(&self) {
@@ -932,7 +936,7 @@ impl<const N: usize> Cuboid<N> {
         }
     }
 
-    pub fn resize(&self, amount: i64) -> Self {
+    pub fn resize(&self, amount: Z) -> Self {
         let mut new = *self;
         for dim in 0..N {
             new.min[dim] -= amount;
@@ -958,8 +962,8 @@ impl<const N: usize> Cuboid<N> {
         p.points().all(|x| self.contains_point(x))
     }
 
-    fn things_inside(&self, length_add: i64) -> Vec<[i64; N]> {
-        let total: i64 = (0..N).map(|x| self.length(x) + length_add).product();
+    fn things_inside(&self, length_add: Z) -> Vec<[Z; N]> {
+        let total: Z = (0..N).map(|x| self.length(x) + length_add).product();
         let mut output = vec![];
         for mut n in 0..total {
             let mut pos = self.min;
@@ -1290,7 +1294,7 @@ impl<T: Hash + Eq + Clone + Debug> DisjointSet<T> {
     }
 }
 
-pub fn grab_nums<const N: usize>(s: &str) -> [i64; N] {
+pub fn grab_nums<const N: usize>(s: &str) -> [Z; N] {
     s.grab().ints().ca()
 }
 
@@ -1308,7 +1312,7 @@ pub trait DisplayExt: Display {
     }
 
     #[track_caller]
-    fn int(&self) -> i64 {
+    fn int(&self) -> Z {
         self.to_string().trim().parse().unwrap_or_else(
             #[track_caller]
             |_| panic!("tried to parse {} as int", self),
@@ -1328,7 +1332,7 @@ pub trait DisplayExt: Display {
         charvel(self.to_string().chars().next().unwrap())
     }
 
-    fn ints(&self) -> Vec<i64> {
+    fn ints(&self) -> Vec<Z> {
         self.to_string()
             .split(|c: char| !c.is_numeric() && c != '-')
             .filter_map(|x| {
@@ -1354,7 +1358,7 @@ pub trait DisplayExt: Display {
             .collect_vec()
     }
 
-    fn uints2(&self) -> Vec<i64> {
+    fn uints2(&self) -> Vec<Z> {
         self.to_string()
             .split(|c: char| !c.is_numeric())
             .filter_map(|x| {
@@ -1385,10 +1389,10 @@ pub trait DisplayExt: Display {
         self.paragraphs()
     }
 
-    fn digits(&self) -> Vec<i64> {
+    fn digits(&self) -> Vec<Z> {
         self.to_string()
             .chars()
-            .filter_map(|x| x.to_digit(10).map(|x| x as i64))
+            .filter_map(|x| x.to_digit(10).map(|x| x as Z))
             .collect()
     }
 
@@ -1520,11 +1524,11 @@ where
     step(&mut path, &mut successors, &mut success, &mut cache).then_some(path)
 }
 
-pub fn factorize(n: i64) -> Vec<i64> {
+pub fn factorize(n: Z) -> Vec<Z> {
     Factorization::run(n as u64)
         .factors
         .into_iter()
-        .map(|x| x as i64)
+        .map(|x| x as Z)
         .collect()
 }
 
@@ -1537,7 +1541,7 @@ pub fn parse_grid<T: Clone>(
 
     for (y, line) in s.lines().enumerate() {
         for (x, c) in line.chars().enumerate() {
-            grid[c2(x as _, -(y as i64))] = f(c);
+            grid[c2(x as _, -(y as Z))] = f(c);
         }
     }
 
@@ -1550,7 +1554,7 @@ pub fn parse_hashset(s: &str, mut f: impl FnMut(char) -> bool) -> HashSet<Cell2>
     for (y, line) in s.lines().enumerate() {
         for (x, c) in line.chars().enumerate() {
             if f(c) {
-                grid.insert(c2(x as _, -(y as i64)));
+                grid.insert(c2(x as _, -(y as Z)));
             }
         }
     }
@@ -1587,8 +1591,8 @@ pub trait BetterToOwned: ToOwned {
 
 impl<T: ToOwned> BetterToOwned for T {}
 
-pub fn ord(x: char) -> i64 {
-    x as i64
+pub fn ord(x: char) -> Z {
+    x as Z
 }
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -1615,7 +1619,7 @@ pub trait IsIn: PartialEq + Sized {
 
 impl<T: PartialEq> IsIn for T {}
 
-pub fn bag<T: Eq + Hash>() -> DefaultHashMap<T, i64> {
+pub fn bag<T: Eq + Hash>() -> DefaultHashMap<T, Z> {
     DefaultHashMap::new(0)
 }
 
@@ -1738,16 +1742,16 @@ pub fn integral<T: std::ops::Add<Output = T> + Clone>(a: &[T]) -> Vec<T> {
     result
 }
 
-pub fn linear_regression(p1: Point<2>, p2: Point<2>, x: i64) -> Rational64 {
+pub fn linear_regression(p1: Point<2>, p2: Point<2>, x: Z) -> Q {
     let Point([x1, y1]) = p1;
     let Point([x2, y2]) = p2;
-    let a = Rational64::new(y2 - y1, x2 - x1);
-    let b = Rational64::new(y2, 1) - a * Rational64::new(x2, 1);
-    a * Rational64::new(x, 1) + b
+    let a = Q::new(y2 - y1, x2 - x1);
+    let b = Q::new(y2, 1) - a * Q::new(x2, 1);
+    a * Q::new(x, 1) + b
 }
 
 // wait a minute...
-pub const INF: i64 = i64::MAX;
+pub const INF: Z = Z::MAX;
 // shhhhh its big enough
 
 pub fn parse_2d(s: &str) -> Vec<Vec<char>> {
